@@ -63,7 +63,7 @@
             <p class="eyebrow">OpenClaw RL Guidelines engine</p>
             <h2>Generate the prompt, rubric, verifier, and run plan.</h2>
           </div>
-          <p>Pick a hard OpenClaw coding scenario, generate the task, lint the package, build the verifier, then compare Model A, Model B, and Silver.</p>
+          <p>Pick a hard OpenClaw coding scenario, generate the task, lint the package, build the verifier, and get the package upload-ready.</p>
         </header>
 
         <section class="topbar" aria-label="Search">
@@ -185,7 +185,7 @@
 
             <label>
               Generated prompt
-              <textarea id="single-turn-prompt" rows="7" placeholder="Click Generate full task + rubric. This becomes the exact prompt for Model A and Model B."></textarea>
+              <textarea id="single-turn-prompt" rows="7" placeholder="Click Generate full task + rubric. This becomes the exact single-turn prompt the agent receives."></textarea>
             </label>
             <label>
               Agent Objective
@@ -196,8 +196,8 @@
               <textarea id="core-functionalities" placeholder="Observable capabilities: acquisition, decision logic, state tracking, structured artifact."></textarea>
             </label>
             <label>
-              Build Complexity / Model A failure plan
-              <textarea id="build-complexity" placeholder="Friction points and why Model A should fail at least 50% of rubric score."></textarea>
+              Build Complexity / difficulty plan
+              <textarea id="build-complexity" placeholder="Friction points, conflicts, ambiguity, and hidden failure modes that force a weak trajectory to lose at least 50% of rubric score."></textarea>
             </label>
             <label>
               Desired Outcome
@@ -206,7 +206,7 @@
             <div class="form-grid">
               <label>
                 Environment and baseline parity notes
-                <textarea id="environment-notes" placeholder="Live test accounts only. Equivalent starting state for Model A and Model B."></textarea>
+                <textarea id="environment-notes" placeholder="Live test accounts only. Reproducible equivalent starting state."></textarea>
               </label>
               <label>
                 Tool systems
@@ -223,29 +223,13 @@
                 <textarea id="unit-tests" placeholder="Only deterministic structure checks; use rubrics for flexible quality."></textarea>
               </label>
             </div>
-            <div class="form-grid">
-              <label>
-                Safety review notes
-                <textarea id="safety-notes" placeholder="Safety check, F1-F8/T0-T3 annotation path if relevant."></textarea>
-              </label>
-              <label>
-                Model A expectation
-                <textarea id="model-a-notes" placeholder="Expected weak trajectory and likely failures."></textarea>
-              </label>
-            </div>
-            <div class="form-grid">
-              <label>
-                Model B expectation
-                <textarea id="model-b-notes" placeholder="Expected strong trajectory."></textarea>
-              </label>
-              <label>
-                Silver trajectory plan
-                <textarea id="silver-notes" placeholder="Clone best model trajectory and continue until all rubrics pass."></textarea>
-              </label>
-            </div>
             <label>
-              Upload / folder plan
-              <textarea id="upload-notes" placeholder="Model A folder, Model B folder, Silver folder, trajectories, artifacts, labels."></textarea>
+              Safety review notes
+              <textarea id="safety-notes" placeholder="Safety check, F1-F8/T0-T3 annotation path if relevant."></textarea>
+            </label>
+            <label>
+              Upload / package plan
+              <textarea id="upload-notes" placeholder="Package folder: prompt, rubrics, verifier, desired outcome, MEMORY.md, artifacts, labels."></textarea>
             </label>
           </div>
 
@@ -274,7 +258,7 @@
 
         <section class="view" id="view-gates">
           <div class="view-desc">
-            <strong>Quality Gates</strong> - OpenClaw-only checks for live environment, parity, Skills, MEMORY.md, prompt quality, rubrics, unit tests, safety, silver, and upload.
+            <strong>Quality Gates</strong> - OpenClaw-only checks for live environment, parity, Skills, MEMORY.md, prompt quality, rubrics, unit tests, safety, and upload readiness.
           </div>
           <div class="split stacked-mobile">
             <div class="panel">
@@ -332,7 +316,7 @@
 
         <section class="view" id="view-runner">
           <div class="view-desc">
-            <strong>Runner</strong> - Static run tracker for package status, Model A, Model B, Silver, and extraction/upload readiness.
+            <strong>Runner</strong> - Static run tracker for package status, prompt status, and upload readiness.
           </div>
           <div class="split stacked-mobile">
             <form id="runner-form" class="panel">
@@ -346,30 +330,19 @@
                 </select>
               </label>
               <label>
-                Model A
-                <select id="model-a-status">
-                  <option value="not-run">not-run</option>
-                  <option value="running">running</option>
-                  <option value="extracted">extracted</option>
-                  <option value="failed">failed</option>
+                Prompt
+                <select id="prompt-status">
+                  <option value="draft">draft</option>
+                  <option value="reviewed">reviewed</option>
+                  <option value="locked">locked</option>
                 </select>
               </label>
               <label>
-                Model B
-                <select id="model-b-status">
-                  <option value="not-run">not-run</option>
-                  <option value="running">running</option>
-                  <option value="extracted">extracted</option>
-                  <option value="failed">failed</option>
-                </select>
-              </label>
-              <label>
-                Silver
-                <select id="silver-status">
-                  <option value="not-started">not-started</option>
-                  <option value="cloned">cloned</option>
-                  <option value="continued">continued</option>
-                  <option value="passes-rubrics">passes-rubrics</option>
+                Upload readiness
+                <select id="upload-status">
+                  <option value="not-ready">not-ready</option>
+                  <option value="needs-fixes">needs-fixes</option>
+                  <option value="ready">ready</option>
                 </select>
               </label>
               <label>
@@ -405,6 +378,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=openclaw-rl-v10"></script>
+    <script src="app.js?v=openclaw-rl-v11"></script>
   </body>
 </html>

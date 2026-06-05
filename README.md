@@ -9,13 +9,13 @@ This is the OpenClaw counterpart to `selection-improvement-experts`, but it does
 | Workspace | Purpose |
 | --- | --- |
 | Library | Search and edit bundled OpenClaw rules plus local reviewer notes |
-| Task Builder | Generate the full prompt, objective, desired outcome, MEMORY.md plan, silver plan, upload plan, and rubric |
+| Task Builder | Generate the full prompt, objective, desired outcome, MEMORY.md plan, upload plan, and rubric |
 | Rubric Lab | Edit generated weighted rubrics and validate atomic positive criteria |
-| Quality Gates | Audit live environment, parity, Skills, MEMORY.md, prompt, rubrics, unit tests, safety, silver, and upload |
-| Workflow | Track the six-step OpenClaw execution path |
-| Templates | Generate MEMORY.md, rubric JSON, verifier stub, safety annotation, and upload folder templates |
-| Runner | Track Model A, Model B, Silver, and extraction/upload readiness |
-| Answer Helper | Match saved rules to onboarding or reviewer questions |
+| Quality Gates | Audit live environment, parity, Skills, MEMORY.md, prompt, rubrics, unit tests, safety, and upload readiness |
+| Workflow | Track the six-step OpenClaw path from idea through rubric to an upload-ready package |
+| Templates | Generate MEMORY.md, rubric JSON, verifier stub, safety annotation, and upload package templates |
+| Runner | Track package status, prompt status, and upload readiness |
+| Answer Helper | Classify a guideline question by intent and return a synthesized OpenClaw answer plus supporting evidence |
 
 ## Quick Start
 
