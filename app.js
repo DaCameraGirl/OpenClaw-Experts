@@ -1,4 +1,4 @@
-const APP_VERSION = "openclaw-rl-v6";
+const APP_VERSION = "openclaw-rl-v8";
 const STORAGE_KEY = "openclaw-experts-v2";
 const LEGACY_STORAGE_KEY = "openclaw-experts-v1";
 const RULES_URL = "openclaw-rules.json";
@@ -1345,7 +1345,7 @@ function renderAnswerHelper() {
   const rawQuestion = els["answer-question"].value.trim();
   const q = rawQuestion.toLowerCase();
   if (!q) {
-    els["answer-outline"].textContent = "Paste an onboarding or reviewer question to get an answer outline grounded in saved OpenClaw rules.";
+    els["answer-outline"].textContent = "Ask an OpenClaw guideline question. The helper will answer first, then show the guideline evidence it used.";
     els["answer-rules"].innerHTML = "";
     return;
   }
@@ -1361,7 +1361,7 @@ function renderAnswerHelper() {
       <div class="num">${escapeHtml(r.guideTitle)}</div>
       <p>${escapeHtml(r.text)}</p>
     </div>
-  `).join("") || `<p class="empty-note">No close rule hits. Load OpenClaw guidelines or add your own notes to the Library.</p>`;
+  `).join("") || `<p class="empty-note">No direct evidence hit for this wording. The answer still uses the built-in OpenClaw workflow rules.</p>`;
 
   els["answer-outline"].textContent = buildOpenClawAnswer(rawQuestion, hits);
 }
@@ -1372,10 +1372,106 @@ function scoreRule(text, query) {
   return words.reduce((s, w) => s + (lower.includes(w) ? 1 : 0), 0);
 }
 
+function openClawCapabilityAnswer(cite) {
+  return cleanGeneratedText([
+    "Answer (OpenClaw guideline helper):",
+    "I can answer questions about how to build and check an OpenClaw RL task package from the loaded RL Guidelines and Reviewer Guidelines.",
+    "",
+    "I can help with:",
+    "1. The goal of the project and the 6-step OpenClaw workflow.",
+    "2. What kinds of prompts are allowed and how hard they need to be.",
+    "3. How to write Agent Objective, Core Functionalities, Build Complexity, and Desired Outcome.",
+    "4. How rubrics must be written, including PRESENT, NOT PRESENT, weights, and negative criteria.",
+    "5. When verifier/unit tests are allowed.",
+    "6. How Model A, Model B, safety review, Silver trajectory, and upload folders work.",
+    "7. Whether a generated task package passes or needs concrete edits.",
+    "",
+    "Ask directly, for example: 'what kind of prompt do we make?', 'how should rubrics be written?', 'when do I use verifier tests?', or 'what is the object of this project?'",
+    "",
+    `Refs: ${cite(["1.1", "1.2", "3.1", "3.2", "4.1", "4.2", "4.5", "2.2"])}.`,
+  ].join("\n"));
+}
+
+function projectObjectiveAnswer(cite) {
+  return cleanGeneratedText([
+    "Answer (object of the OpenClaw project):",
+    "The object is to create a task package that tests whether an LLM agent can perform realistic end-to-end work in a live environment. The package must define the agent objective, prompt, desired outcome, rubrics, deterministic verifier tests if justified, safety review path, Model A/B comparison, Silver trajectory plan, and upload materials.",
+    "",
+    "Success means the task separates model quality. For a normal non-safety task, Model A should fail at least 50% of the rubric weight while a stronger trajectory can be continued into Silver until all rubrics pass.",
+    "",
+    `Refs: ${cite(["1.1", "1.2", "1.2.3", "4.1", "4.2", "4.4", "4.5", "4.6", "2.2"])}.`,
+  ].join("\n"));
+}
+
+function promptTypesAnswer(cite) {
+  return cleanGeneratedText([
+    "Answer (kinds of OpenClaw prompts):",
+    "OpenClaw prompts are realistic user requests for live agent work. They should be natural, complex, self-contained, and identical for Model A and Model B. Single-turn tasks cannot depend on follow-up turns.",
+    "",
+    "Good prompt families for this app:",
+    "1. Coding recovery tasks, such as Git force-push recovery using log, reflog, branch, filesystem, and MEMORY.md evidence.",
+    "2. Coding diagnosis tasks, such as TypeScript conditional-type bugs that require compiler output, source inspection, strictness preservation, and typecheck verification.",
+    "3. React debugging tasks, such as stale closure or async race fixes that require source inspection, test/build verification, and no timeout masking.",
+    "4. Multi-system agent tasks, such as health reports, contract risk extraction, scheduling, or safety-gated actions when they use live systems and verifiable artifacts.",
+    "",
+    "The prompt should not give away the rubric or force the exact architecture. Put detailed model-differentiation requirements in Build Complexity. The prompt itself should read like a real user asking for help.",
+    "",
+    `Refs: ${cite(["ST.1", "ST.2", "ST.3", "ST.4", "ST.5", "1.1.1", "1.3.1", "1.3.3"])}.`,
+  ].join("\n"));
+}
+
+function evidenceFallbackAnswer(question, hits, cite) {
+  const evidence = hits
+    .slice(0, 4)
+    .map((h, i) => `${i + 1}. ${stripRuleNumber(h.text).slice(0, 240)}`);
+
+  if (evidence.length) {
+    return cleanGeneratedText([
+      "Answer (OpenClaw-only):",
+      "The closest loaded guideline evidence points to this practical answer:",
+      "",
+      ...evidence,
+      "",
+      "Use those rules as a pass/fail check against the package. If the question is about a task, convert it into a concrete edit to the prompt, Agent Objective, Desired Outcome, rubric, verifier, safety review, Silver plan, or upload plan.",
+      "",
+      `Refs: ${cite(["1.1", "1.2", "3.2", "4.1"])}.`,
+    ].join("\n"));
+  }
+
+  return cleanGeneratedText([
+    "Answer (OpenClaw-only):",
+    "That does not look like a specific OpenClaw guideline question yet. I can still help, but I need the question to point at prompt design, rubric format, verifier tests, parity, MEMORY.md, safety review, Model A failure, Silver trajectory, upload folders, or the generated package.",
+    "",
+    "For general help, the OpenClaw workflow is: design the idea and prompt, run Model A and Model B with the same prompt, extract trajectories, check safety, score with custom rubrics and deterministic tests only when justified, rank models, then clone the best trajectory into Silver and continue until all rubrics pass.",
+    "",
+    `Refs: ${cite(["4.1", "4.2", "4.3", "4.4", "4.5", "4.6"])}.`,
+  ].join("\n"));
+}
+
+function stripRuleNumber(text) {
+  return String(text || "").replace(/^([A-Z]*\.?\d+(?:\.\d+)?|ST\.\d+|\d+(?:\.\d+)*)\s*[-.:)]?\s*/, "").trim();
+}
+
 function buildOpenClawAnswer(question, hits = []) {
   const q = question.toLowerCase();
   const refs = hits.slice(0, 5).map((h) => h.text.match(/^([A-Z]*\.?\d+(?:\.\d+)?|ST\.\d+|\d+(?:\.\d+)*)/)?.[1]).filter(Boolean);
   const cite = (fallback) => cleanGeneratedText([...new Set(refs.length ? refs : fallback)].join(", "));
+
+  if (/^(hey|hi|hello|wassup|what'?s up|sup|yo|help)\b/.test(q)) {
+    return openClawCapabilityAnswer(cite);
+  }
+
+  if (/what can|help me|what do|how can|capabil|do for me/.test(q)) {
+    return openClawCapabilityAnswer(cite);
+  }
+
+  if (/object|objective|purpose|mission|what is this project|why.*project|goal of.*project|point of.*project/.test(q)) {
+    return projectObjectiveAnswer(cite);
+  }
+
+  if (/(kind|type|category|famil|examples?).*(prompt|task)|prompt.*(kind|type|category|famil|examples?)|what.*prompt.*do|name.*prompt/.test(q)) {
+    return promptTypesAnswer(cite);
+  }
 
   if (/end\s*user|worker|task\s*creator|reviewer|reviewere|reviewer guidelines|rl guidelines|oopenclaw/.test(q)) {
     return cleanGeneratedText([
@@ -1461,12 +1557,7 @@ function buildOpenClawAnswer(question, hits = []) {
     ].join("\n"));
   }
 
-  return cleanGeneratedText([
-    "Answer (OpenClaw-only):",
-    "I found matching OpenClaw rules below. Apply them as a concrete pass/fail check against the task package. If the question is about prompt, rubric, verifier, parity, MEMORY.md, safety, or silver trajectory, the answer must come from the matching OpenClaw rule refs, not Selection Improvement rules.",
-    "",
-    `Most relevant refs: ${cite(["1.1", "1.2", "3.2", "4.1"])}.`,
-  ].join("\n"));
+  return evidenceFallbackAnswer(question, hits, cite);
 }
 
 function renderDraftDependentViews() {

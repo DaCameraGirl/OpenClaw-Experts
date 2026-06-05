@@ -382,7 +382,7 @@
 
         <section class="view" id="view-answer">
           <div class="view-desc">
-            <strong>Answer Helper</strong> - Paste an onboarding or reviewer question. Matching OpenClaw rules surface with an answer outline.
+            <strong>Answer Helper</strong> - Ask an OpenClaw guideline question. The helper answers from the loaded RL and Reviewer guidelines, then shows the evidence it used.
           </div>
           <div class="split stacked-mobile">
             <div class="panel">
@@ -390,10 +390,10 @@
                 Your question
                 <textarea id="answer-question" rows="6" placeholder="Example: When do I use unit tests vs rubrics in OpenClaw?"></textarea>
               </label>
-              <pre id="answer-outline" class="package-block">Paste a question to get an outline.</pre>
+              <pre id="answer-outline" class="package-block">Ask a question to get an OpenClaw-guideline answer.</pre>
             </div>
             <div class="panel">
-              <div class="panel-header"><h2>Matching OpenClaw Rules</h2></div>
+              <div class="panel-header"><h2>Evidence Used</h2></div>
               <div id="answer-rules"></div>
             </div>
           </div>
@@ -401,6 +401,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=openclaw-rl-v6"></script>
+    <script src="app.js?v=openclaw-rl-v8"></script>
   </body>
 </html>

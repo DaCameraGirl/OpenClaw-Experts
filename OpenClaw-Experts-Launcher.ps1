@@ -2,7 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $port = 8010
-$url = "http://localhost:$port"
+$stamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$url = "http://localhost:$port/index.html?v=$stamp"
 
 $listener = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
 if (-not $listener) {
