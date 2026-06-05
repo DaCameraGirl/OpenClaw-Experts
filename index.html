@@ -122,7 +122,11 @@
             </div>
             <div class="generator-actions">
               <label>
-                Scenario pattern
+                Source seed request
+                <textarea id="seed-request" rows="3" placeholder="Paste the real user request, repo problem, reviewer idea, or source inspiration. The generator builds from this instead of canned prompts."></textarea>
+              </label>
+              <label>
+                Task family
                 <select id="starter">
                   <option value="gitRecovery">Git - Force-Push Recovery</option>
                   <option value="typescriptBug">TypeScript - Conditional Type Bug</option>
@@ -401,6 +405,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=openclaw-rl-v8"></script>
+    <script src="app.js?v=openclaw-rl-v10"></script>
   </body>
 </html>
