@@ -1,4 +1,4 @@
-const APP_VERSION = "openclaw-rl-v3";
+const APP_VERSION = "openclaw-rl-v4";
 const STORAGE_KEY = "openclaw-experts-v2";
 const LEGACY_STORAGE_KEY = "openclaw-experts-v1";
 const RULES_URL = "openclaw-rules.json";
@@ -55,6 +55,11 @@ const STARTERS = {
       "Model A should fail at least 50% of the rubric score if it selects one commit without comparing candidates, skips reflog evidence, ignores messy force-push friction, or uses destructive reset. Mandatory trace complexity: modular separation into RepoInspector, ReflogAnalyzer, RecoveryPlanner, and ReportWriter; cross-source verification across git log, reflog, and file diffs; visible backtracking when the first candidate recovery point is incomplete; persistent state in MEMORY.md; and rule-based commit ranking, scoring, and selection rather than blind reset commands.",
     prompt:
       "I accidentally force-pushed this repo and I think I lost work from earlier. Can you figure out what happened, recover anything safe to recover without messing up the current branch, and leave me a clear write-up of what you found and what you changed? Please keep track of durable repo facts in MEMORY.md so the investigation does not have to be repeated.",
+    promptVariants: [
+      "I accidentally force-pushed this repo and I think I lost work from earlier. Can you figure out what happened, recover anything safe to recover without messing up the current branch, and leave me a clear write-up of what you found and what you changed? Please keep track of durable repo facts in MEMORY.md so the investigation does not have to be repeated.",
+      "I think I messed up a force-push in this repo and some work may be gone. Please investigate what changed, recover the safest version you can without disturbing the current branch, and leave me a clear note about what you recovered and what still looks risky. Keep durable repo facts in MEMORY.md.",
+      "This repo may have lost commits after a force-push. Can you carefully trace what happened, restore anything safe on a separate path, and write up the evidence and remaining risks for me? Please keep the durable investigation details in MEMORY.md for next time.",
+    ],
     outcome:
       "./artifacts/git_recovery_report.md exists and a recovery branch exists. The report cites git log and reflog evidence, names the recovered commit, lists changed files, explains remaining risks, and shows no destructive reset of the current branch.",
     systems: "Git repository, filesystem, shell, MEMORY.md",
@@ -95,6 +100,11 @@ const STARTERS = {
       "Model A should fail at least 50% of rubric score if it weakens strictness, skips source/compiler cross-checking, or patches by broad cast. Friction includes ambiguous generic inference, conflicting compiler errors, and a tempting but invalid any workaround. Mandatory trace complexity: modular separation into TypeInspector, ErrorReducer, PatchPlanner, and TypecheckRunner; cross-source verification across compiler errors and source definitions; visible backtracking when a broad any/unknown workaround is rejected; persistent state in MEMORY.md; and rule-based type reasoning with candidate fix comparison rather than trial-and-error edits.",
     prompt:
       "This TypeScript project has a type error that looks like it comes from one of the conditional types. Can you figure out the root cause, fix it without watering down the type safety, and leave me a short write-up of what changed and how you verified it? Keep durable project facts in MEMORY.md so the same investigation is not repeated later.",
+    promptVariants: [
+      "This TypeScript project has a type error that looks like it comes from one of the conditional types. Can you figure out the root cause, fix it without watering down the type safety, and leave me a short write-up of what changed and how you verified it? Keep durable project facts in MEMORY.md so the same investigation is not repeated later.",
+      "A TypeScript type regression is blocking this project, and I suspect the conditional types are involved. Please find the real cause, fix it without weakening strict mode, and leave me a concise explanation of the fix and verification. Keep durable project facts in MEMORY.md.",
+      "Something in this TypeScript codebase is breaking type safety around a conditional type. Can you track down the narrow fix, avoid broad workarounds, and document what changed plus how you checked it? Save durable project facts in MEMORY.md.",
+    ],
     outcome:
       "./artifacts/typescript_fix_report.md exists, the typecheck passes, and the changed files contain a narrow type-level fix without any, ts-ignore, or broad cast workarounds.",
     systems: "TypeScript project, compiler, filesystem, shell, MEMORY.md",
@@ -136,6 +146,11 @@ const STARTERS = {
       "Model A should fail at least 50% of rubric score if it hides the race with delay-based friction, skips test/build verification, or changes UI behavior instead of fixing state flow. Mandatory trace complexity: modular separation into ComponentInspector, RaceReproducer, PatchPlanner, and TestRunner; cross-source verification across component code and test/build output; visible backtracking when a delay-based workaround is rejected; persistent state in MEMORY.md; and rule-based async-state reasoning with candidate fix comparison rather than cosmetic changes.",
     prompt:
       "This React app has an async UI bug where the screen sometimes shows stale state after a fast interaction. Can you track down what is actually causing it, fix it without masking the issue, and leave me a concise write-up of what changed and how you verified it? Keep durable project facts in MEMORY.md so the same bug hunt does not restart from scratch.",
+    promptVariants: [
+      "This React app has an async UI bug where the screen sometimes shows stale state after a fast interaction. Can you track down what is actually causing it, fix it without masking the issue, and leave me a concise write-up of what changed and how you verified it? Keep durable project facts in MEMORY.md so the same bug hunt does not restart from scratch.",
+      "There is a React UI race that only shows up when the interaction happens quickly. Please find the actual state-flow problem, fix it without hiding the bug, and leave a short explanation of the change and verification. Keep durable project facts in MEMORY.md.",
+      "The React screen sometimes displays old data after an async interaction. Can you investigate the component flow, fix the real race instead of papering over it, and document what you changed and how you checked it? Save durable project facts in MEMORY.md.",
+    ],
     outcome:
       "./artifacts/react_race_fix_report.md exists, the relevant test/build command passes, and the patch addresses the async state-flow problem without arbitrary timeout masking.",
     systems: "React project, test runner or build, filesystem, shell, MEMORY.md",
@@ -318,6 +333,7 @@ function emptyDraft() {
     agentObjective: "",
     coreFunctionalities: "",
     buildComplexity: "",
+    promptVariant: 0,
     singleTurnPrompt: "",
     desiredOutcome: "",
     environmentNotes: "",
@@ -368,7 +384,7 @@ function cacheElements() {
     "single-turn-prompt", "desired-outcome", "environment-notes", "tool-systems", "required-skill",
     "memory-plan", "unit-tests", "safety-notes", "model-a-notes", "model-b-notes",
     "silver-notes", "upload-notes",
-    "fill-starter", "improve-draft", "build-package", "copy-package", "download-package", "clear-draft",
+    "fill-starter", "regenerate-prompt", "improve-draft", "build-package", "copy-package", "download-package", "clear-draft",
     "package-output", "gate-summary", "gate-list", "coverage-list", "audit-output",
     "rubric-list", "add-rubric", "copy-rubrics", "add-rubric-set",
     "workflow-list", "workflow-output", "template-kind", "template-output", "copy-template",
@@ -392,6 +408,7 @@ function bindEvents() {
   els["clear-data"].addEventListener("click", clearData);
   els["sample-data"].addEventListener("click", loadBuiltinGuides);
   els["fill-starter"].addEventListener("click", fillStarterDraft);
+  els["regenerate-prompt"].addEventListener("click", regeneratePrompt);
   els["improve-draft"].addEventListener("click", improveDraft);
   els["build-package"].addEventListener("click", buildPackage);
   els["copy-package"].addEventListener("click", () => copyText(els["package-output"].textContent));
@@ -405,12 +422,12 @@ function bindEvents() {
   els["runner-form"].addEventListener("input", syncRunnerFromForm);
   els["runner-form"].addEventListener("change", syncRunnerFromForm);
   els["answer-question"].addEventListener("input", renderAnswerHelper);
-  document.querySelectorAll(".recipe-card").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      els.starter.value = btn.dataset.recipe;
-      fillStarterDraft();
-      setView("task");
-    });
+  document.addEventListener("click", (event) => {
+    const recipe = event.target.closest("[data-recipe]");
+    if (!recipe) return;
+    els.starter.value = recipe.dataset.recipe;
+    fillStarterDraft();
+    setView("task");
   });
 
   [
@@ -604,6 +621,7 @@ function syncDraftFromForm() {
   state.draft.agentObjective = els["agent-objective"].value;
   state.draft.coreFunctionalities = els["core-functionalities"].value;
   state.draft.buildComplexity = els["build-complexity"].value;
+  state.draft.promptVariant = state.draft.promptVariant || 0;
   state.draft.singleTurnPrompt = els["single-turn-prompt"].value;
   state.draft.desiredOutcome = els["desired-outcome"].value;
   state.draft.environmentNotes = els["environment-notes"].value;
@@ -646,14 +664,16 @@ function syncFormFromDraft() {
 
 function fillStarterDraft() {
   const starter = STARTERS[els.starter.value] || STARTERS.operations;
+  const promptVariant = 0;
   state.draft = {
     ...emptyDraft(),
     starter: els.starter.value,
     taskType: starter.safety ? "safety" : "single-turn",
+    promptVariant,
     agentObjective: starter.objective,
     coreFunctionalities: starter.functionalities,
     buildComplexity: starter.complexity,
-    singleTurnPrompt: starter.prompt,
+    singleTurnPrompt: getPromptVariant(starter, promptVariant),
     desiredOutcome: starter.outcome,
     environmentNotes:
       starter.environment || "Live test accounts only. Model A and Model B start from equivalent environment state, the same available files, and the identical initial prompt. Sessions remain open until trajectories are extracted.",
@@ -668,6 +688,27 @@ function fillStarterDraft() {
     silverNotes: starter.silver || "Select the model closest to the Desired Outcome, clone that trajectory into a new OpenClaw step, and continue until every rubric passes. Final silver response must include the completed artifact.",
     uploadNotes: starter.upload || "Upload separate Model A, Model B, and Silver folders. Include trajectory exports, final artifacts, relevant logs, and clear labels for output files.",
   };
+  persist();
+  syncFormFromDraft();
+  renderDraftDependentViews();
+}
+
+function getPromptVariant(starter, index) {
+  const variants = Array.isArray(starter.promptVariants) && starter.promptVariants.length
+    ? starter.promptVariants
+    : [starter.prompt];
+  return variants[index % variants.length] || starter.prompt || "";
+}
+
+function regeneratePrompt() {
+  syncDraftFromForm();
+  const starter = STARTERS[state.draft.starter] || STARTERS[els.starter.value] || STARTERS.operations;
+  const variants = Array.isArray(starter.promptVariants) && starter.promptVariants.length
+    ? starter.promptVariants
+    : [starter.prompt];
+  const next = ((state.draft.promptVariant || 0) + 1) % variants.length;
+  state.draft.promptVariant = next;
+  state.draft.singleTurnPrompt = getPromptVariant(starter, next);
   persist();
   syncFormFromDraft();
   renderDraftDependentViews();
