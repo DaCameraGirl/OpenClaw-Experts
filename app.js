@@ -1,4 +1,4 @@
-const APP_VERSION = "openclaw-rl-v11";
+const APP_VERSION = "openclaw-rl-v12";
 const STORAGE_KEY = "openclaw-experts-v2";
 const LEGACY_STORAGE_KEY = "openclaw-experts-v1";
 const RULES_URL = "openclaw-rules.json";
@@ -58,6 +58,18 @@ const WORKFLOW_STEPS = [
   { id: "verifier", label: "4. Set verifier tests and safety review", ref: "4.5" },
   { id: "gate", label: "5. Pass quality gates", ref: "1.2" },
   { id: "upload", label: "6. Mark package upload-ready", ref: "2.3" },
+];
+
+// The pipeline is a strict, ordered chain: each stage produces an output that
+// unlocks the next. A stage cannot be entered until every prior stage is
+// complete, mirroring a real staged build (generate -> build -> review ->
+// verify -> ship). state.draft.pipeline records which stages are complete.
+const PIPELINE_STAGES = [
+  { id: "design", num: 1, label: "Design & Generate", ref: "4.1", unlocks: "the generated task draft" },
+  { id: "build", num: 2, label: "Build Package", ref: "1.2", unlocks: "the assembled package + gate report" },
+  { id: "review", num: 3, label: "Rubrics & Gates", ref: "3.2", unlocks: "the reviewed rubric and gate set" },
+  { id: "verifier", num: 4, label: "Verifier & Templates", ref: "4.5", unlocks: "the derived verifier and helper files" },
+  { id: "ship", num: 5, label: "Upload-Ready", ref: "2.3", unlocks: "the upload-ready package" },
 ];
 
 const STARTERS = {
@@ -282,6 +294,8 @@ function emptyDraft() {
     safetyNotes: "",
     uploadNotes: "",
     workflow: Object.fromEntries(WORKFLOW_STEPS.map((s) => [s.id, "todo"])),
+    pipeline: emptyPipeline(),
+    stage: "design",
     runner: {
       packageStatus: "not-built",
       promptStatus: "draft",
@@ -289,6 +303,10 @@ function emptyDraft() {
       notes: "",
     },
   };
+}
+
+function emptyPipeline() {
+  return Object.fromEntries(PIPELINE_STAGES.map((s) => [s.id, false]));
 }
 
 const els = {};
@@ -316,12 +334,15 @@ function cacheElements() {
     "fill-starter", "regenerate-prompt", "improve-draft", "build-package", "copy-package", "download-package", "clear-draft",
     "package-output", "gate-summary", "gate-list", "coverage-list", "audit-output",
     "rubric-list", "add-rubric", "copy-rubrics", "add-rubric-set",
-    "workflow-list", "workflow-output", "template-kind", "template-output", "copy-template",
+    "template-kind", "template-output", "copy-template", "refresh-templates", "template-context",
     "runner-form", "package-status", "prompt-status", "upload-status", "runner-notes", "runner-output",
     "answer-question", "answer-outline", "answer-rules",
+    "stage-rail", "goto-build", "goto-review", "goto-verifier", "goto-ship", "mark-upload-ready",
+    "design-foot-note", "build-foot-note", "review-foot-note", "verifier-foot-note",
   ].forEach((id) => { els[id] = document.getElementById(id); });
   els.tabs = [...document.querySelectorAll(".tab")];
   els.views = [...document.querySelectorAll(".view")];
+  els.stagePanels = [...document.querySelectorAll(".stage-panel")];
   els.recipeGrid = document.querySelector(".recipe-grid");
 }
 
@@ -348,16 +369,26 @@ function bindEvents() {
   els["add-rubric-set"].addEventListener("click", addRecommendedRubrics);
   els["copy-rubrics"].addEventListener("click", copyRubricsJson);
   els["template-kind"].addEventListener("change", renderTemplates);
+  els["refresh-templates"].addEventListener("click", syncTemplatesFromPackage);
   els["copy-template"].addEventListener("click", () => copyText(els["template-output"].textContent));
   els["runner-form"].addEventListener("input", syncRunnerFromForm);
   els["runner-form"].addEventListener("change", syncRunnerFromForm);
+  els["mark-upload-ready"].addEventListener("click", markUploadReady);
   els["answer-question"].addEventListener("input", renderAnswerHelper);
+
+  // Stage advance buttons: each only enables when its source stage is complete.
+  els["goto-build"].addEventListener("click", () => advanceStage("build"));
+  els["goto-review"].addEventListener("click", () => advanceStage("review"));
+  els["goto-verifier"].addEventListener("click", () => advanceStage("verifier"));
+  els["goto-ship"].addEventListener("click", () => advanceStage("ship"));
+
   document.addEventListener("click", (event) => {
     const recipe = event.target.closest("[data-recipe]");
     if (!recipe) return;
     els.starter.value = recipe.dataset.recipe;
+    setView("pipeline");
+    setStage("design");
     fillStarterDraft();
-    setView("task");
   });
 
   [
@@ -413,11 +444,15 @@ function hydrateFromStorage() {
 function mergeDraft(saved) {
   const base = emptyDraft();
   const savedRunner = saved.runner || {};
-  return {
+  const merged = {
     ...base,
     ...saved,
     rubrics: Array.isArray(saved.rubrics) ? saved.rubrics : base.rubrics,
     workflow: { ...base.workflow, ...(saved.workflow || {}) },
+    // Old (pre-v12) drafts have no pipeline state; rebuild it from what the
+    // draft already contains so returning users land mid-pipeline gracefully.
+    pipeline: { ...base.pipeline, ...(saved.pipeline || {}) },
+    stage: saved.stage && PIPELINE_STAGES.some((s) => s.id === saved.stage) ? saved.stage : base.stage,
     runner: {
       packageStatus: savedRunner.packageStatus || base.runner.packageStatus,
       promptStatus: savedRunner.promptStatus || base.runner.promptStatus,
@@ -425,6 +460,43 @@ function mergeDraft(saved) {
       notes: savedRunner.notes || base.runner.notes,
     },
   };
+  return reconcilePipeline(merged);
+}
+
+// Derive pipeline completion from draft contents so migrated data (or an
+// edited draft) is always self-consistent: a stage is complete only if its
+// product actually exists.
+function reconcilePipeline(draft) {
+  const hasDraft = Boolean((draft.singleTurnPrompt || "").trim() && (draft.agentObjective || "").trim());
+  const hasPackage = draft.runner.packageStatus === "built" || draft.runner.packageStatus === "needs-fixes";
+  draft.pipeline = {
+    design: hasDraft || draft.pipeline.design,
+    build: (hasPackage && hasDraft) || draft.pipeline.build,
+    review: draft.pipeline.review && (hasPackage && hasDraft),
+    verifier: draft.pipeline.verifier && (hasPackage && hasDraft),
+    ship: draft.pipeline.ship && (hasPackage && hasDraft),
+  };
+  if (!draft.pipeline.design) draft.pipeline = emptyPipeline();
+  // Never strand the user on a stage they are no longer allowed to be on.
+  if (!stageReachable(draft, draft.stage)) {
+    draft.stage = highestReachableStage(draft);
+  }
+  return draft;
+}
+
+function stageReachable(draft, stageId) {
+  const idx = PIPELINE_STAGES.findIndex((s) => s.id === stageId);
+  if (idx <= 0) return true;
+  return PIPELINE_STAGES.slice(0, idx).every((s) => draft.pipeline[s.id]);
+}
+
+function highestReachableStage(draft) {
+  let last = "design";
+  for (const s of PIPELINE_STAGES) {
+    if (stageReachable(draft, s.id)) last = s.id;
+    else break;
+  }
+  return last;
 }
 
 function persist() {
@@ -486,6 +558,120 @@ function flattenRules() {
 function setView(view) {
   els.tabs.forEach((t) => t.classList.toggle("is-active", t.dataset.view === view));
   els.views.forEach((v) => v.classList.toggle("is-visible", v.id === `view-${view}`));
+  if (view === "pipeline") renderStage();
+}
+
+// --- Pipeline stage machine -------------------------------------------------
+
+function setStage(stageId) {
+  if (!stageReachable(state.draft, stageId)) {
+    stageId = highestReachableStage(state.draft);
+  }
+  state.draft.stage = stageId;
+  persist();
+  renderStage();
+}
+
+// Mark a stage complete and move into the next one. advanceStage(next) is
+// called by the "Continue to ..." button, so it both records that the prior
+// stage finished and walks the user forward exactly one step.
+function advanceStage(nextStageId) {
+  const nextIdx = PIPELINE_STAGES.findIndex((s) => s.id === nextStageId);
+  if (nextIdx < 1) return;
+  const priorId = PIPELINE_STAGES[nextIdx - 1].id;
+  if (!stageReachable(state.draft, priorId)) return;
+  state.draft.pipeline[priorId] = true;
+  if (nextStageId === "verifier") syncTemplatesFromPackage();
+  setStage(nextStageId);
+}
+
+function markStageComplete(stageId) {
+  if (!state.draft.pipeline[stageId]) {
+    state.draft.pipeline[stageId] = true;
+    persist();
+  }
+}
+
+function renderStage() {
+  const current = state.draft.stage || "design";
+  els.stagePanels.forEach((p) => {
+    p.classList.toggle("is-active-stage", p.dataset.stage === current);
+  });
+  renderStageRail();
+  syncStageGates();
+}
+
+function renderStageRail() {
+  if (!els["stage-rail"]) return;
+  const current = state.draft.stage || "design";
+  els["stage-rail"].innerHTML = PIPELINE_STAGES.map((s) => {
+    const reachable = stageReachable(state.draft, s.id);
+    const done = state.draft.pipeline[s.id];
+    const isCurrent = s.id === current;
+    const status = !reachable ? "locked" : isCurrent ? "current" : done ? "done" : "open";
+    const mark = !reachable ? "&#128274;" : done ? "&#10003;" : String(s.num);
+    return `
+      <button type="button" class="stage-chip ${status}" data-stage-go="${escapeAttr(s.id)}" ${reachable ? "" : "disabled"}>
+        <span class="stage-chip-num">${mark}</span>
+        <span class="stage-chip-label">${escapeHtml(s.label)}</span>
+        <span class="stage-chip-ref">Ref ${escapeHtml(s.ref)}</span>
+      </button>
+    `;
+  }).join("");
+  els["stage-rail"].querySelectorAll("[data-stage-go]").forEach((btn) => {
+    btn.addEventListener("click", () => setStage(btn.dataset.stageGo));
+  });
+}
+
+// Keep each stage's "Continue" button and the upload-ready button in sync with
+// whether the prior stage actually produced its output.
+function syncStageGates() {
+  const p = state.draft.pipeline;
+  const report = runQualityGates(state.draft);
+  if (els["goto-build"]) els["goto-build"].disabled = !p.design;
+  if (els["goto-review"]) els["goto-review"].disabled = !p.build;
+  if (els["goto-verifier"]) els["goto-verifier"].disabled = !p.review && !p.build ? true : !p.build;
+  if (els["goto-ship"]) els["goto-ship"].disabled = !p.verifier && !p.build ? true : !p.verifier;
+
+  if (els["design-foot-note"]) {
+    els["design-foot-note"].textContent = p.design
+      ? "Draft generated. Stage 2 is unlocked."
+      : "Generate a draft to unlock Stage 2.";
+  }
+  if (els["build-foot-note"]) {
+    els["build-foot-note"].textContent = p.build
+      ? "Package built. Stage 3 is unlocked."
+      : "Build the package to unlock Stage 3.";
+  }
+  if (els["review-foot-note"]) {
+    els["review-foot-note"].textContent = report.fails
+      ? `${report.fails} gate(s) still failing - the upload gate stays locked until they pass, but you can keep deriving the verifier.`
+      : "All gates pass. Continue to derive the verifier.";
+  }
+  if (els["verifier-foot-note"]) {
+    els["verifier-foot-note"].textContent = p.verifier
+      ? "Verifier synced. Stage 5 is unlocked."
+      : "Sync the verifier from the package, then continue.";
+  }
+
+  // The final upload gate stays locked until the package built AND gates pass.
+  if (els["mark-upload-ready"]) {
+    const canShip = p.build && report.fails === 0;
+    els["mark-upload-ready"].disabled = !canShip;
+    els["mark-upload-ready"].textContent = state.draft.runner.uploadStatus === "ready"
+      ? "Marked upload-ready"
+      : canShip ? "Mark package upload-ready" : "Upload gate locked - clear failing gates";
+  }
+}
+
+function markUploadReady() {
+  const report = runQualityGates(state.draft);
+  if (report.fails > 0 || !state.draft.pipeline.build) return;
+  state.draft.runner.uploadStatus = "ready";
+  state.draft.runner.promptStatus = "locked";
+  markStageComplete("ship");
+  syncFormFromDraft();
+  renderDraftDependentViews();
 }
 
 function onSaveGuide(e) {
@@ -599,6 +785,7 @@ function fillStarterDraft() {
   const promptVariant = 0;
   const seedRequest = cleanGeneratedText(els["seed-request"].value || state.draft.seedRequest || starter.description || starter.label);
   state.draft = buildOriginalDraft(starterKey, starter, seedRequest, promptVariant);
+  markStageComplete("design");
   persist();
   syncFormFromDraft();
   renderDraftDependentViews();
@@ -944,10 +1131,11 @@ function gate(id, label, passes, ref) {
   return { id, label, status: passes ? "pass" : "fail", ref };
 }
 
-function buildPackage() {
-  syncDraftFromForm();
-  const report = runQualityGates(state.draft);
-  const rubricBlock = state.draft.rubrics
+// Pure assembly of the paste-ready package text from a draft. No side effects,
+// no re-render - so it can be reused by both the Stage 2 action and the
+// preview refresh without recursing.
+function assemblePackageText(draft, report) {
+  const rubricBlock = draft.rubrics
     .map((r, i) => [
       `${i + 1}. [${r.weight}] (${r.category}) ${r.text}`,
       `   PRESENT when: ${r.present || "(define the exact observable pass condition)"}`,
@@ -955,67 +1143,80 @@ function buildPackage() {
     ].join("\n"))
     .join("\n");
 
-  const text = cleanGeneratedText([
+  return cleanGeneratedText([
     "=== OPENCLAW TASK PACKAGE ===",
     `Version: ${APP_VERSION}`,
-    `Task type: ${state.draft.taskType}`,
-    `Starter pattern: ${(STARTERS[state.draft.starter] || STARTERS.operations).label}`,
+    `Task type: ${draft.taskType}`,
+    `Starter pattern: ${(STARTERS[draft.starter] || STARTERS.operations).label}`,
     "",
     "--- AGENT OBJECTIVE ---",
-    state.draft.agentObjective,
+    draft.agentObjective,
     "",
     "--- CORE FUNCTIONALITIES ---",
-    state.draft.coreFunctionalities,
+    draft.coreFunctionalities,
     "",
     "--- BUILD COMPLEXITY / DIFFICULTY PLAN ---",
-    state.draft.buildComplexity,
+    draft.buildComplexity,
     "",
     "--- SINGLE-TURN PROMPT ---",
-    state.draft.singleTurnPrompt,
+    draft.singleTurnPrompt,
     "",
     "--- DESIRED OUTCOME ---",
-    state.draft.desiredOutcome,
+    draft.desiredOutcome,
     "",
     "--- ENVIRONMENT AND PARITY NOTES ---",
-    state.draft.environmentNotes,
+    draft.environmentNotes,
     "",
     "--- TOOL SYSTEMS ---",
-    state.draft.toolSystems,
+    draft.toolSystems,
     "",
     "--- REQUIRED INSTALLED SKILL ---",
-    state.draft.requiredSkill,
+    draft.requiredSkill,
     "",
     "--- MEMORY.md PLAN ---",
-    state.draft.memoryPlan,
+    draft.memoryPlan,
     "",
     "--- RUBRICS ---",
     rubricBlock,
     "",
     "--- UNIT TESTS (ONLY IF DETERMINISTIC) ---",
-    state.draft.unitTests || "(none - use rubrics for flexible outcomes)",
+    draft.unitTests || "(none - use rubrics for flexible outcomes)",
     "",
     "--- SAFETY REVIEW / ANNOTATION NOTES ---",
-    state.draft.safetyNotes,
+    draft.safetyNotes,
     "",
     "--- UPLOAD / FOLDER PLAN ---",
-    state.draft.uploadNotes,
+    draft.uploadNotes,
     "",
     "--- QUALITY GATE SUMMARY ---",
     `Status: ${report.summary.toUpperCase()} | Pass: ${report.gates.length - report.fails - report.warns} | Warn: ${report.warns} | Fail: ${report.fails}`,
     "",
     "Source: OpenClaw RL Guidelines only.",
   ].join("\n"));
+}
 
-  els["package-output"].textContent = text;
+function buildPackage() {
+  syncDraftFromForm();
+  const report = runQualityGates(state.draft);
+  els["package-output"].textContent = assemblePackageText(state.draft, report);
   state.draft.runner.packageStatus = report.fails ? "needs-fixes" : "built";
+  // Building the package is Stage 2's product. It completes the build stage and
+  // unlocks Stage 3 regardless of gate pass/fail (the gates are *reviewed* in
+  // Stage 3); only the final upload gate requires a clean gate set.
+  markStageComplete("design");
+  markStageComplete("build");
   persist();
   syncFormFromDraft();
   renderDraftDependentViews();
 }
 
+// Refresh the package text in place when the draft changes, WITHOUT re-running
+// the full Stage-2 action (which would recurse through renderDraftDependentViews).
 function renderPackagePreview() {
-  if (!els["package-output"].textContent.trim() || els["package-output"].textContent.startsWith("Build a package")) return;
-  buildPackage();
+  const out = els["package-output"];
+  if (!out || !out.textContent.trim() || out.textContent.startsWith("Build a package")) return;
+  const report = runQualityGates(state.draft);
+  out.textContent = assemblePackageText(state.draft, report);
 }
 
 function downloadPackage() {
@@ -1201,49 +1402,26 @@ function renderAudit(report) {
   els["audit-output"].textContent = lines.join("\n");
 }
 
-function renderWorkflow() {
-  els["workflow-list"].innerHTML = WORKFLOW_STEPS.map((step) => `
-    <div class="workflow-row">
-      <div>
-        <strong>${escapeHtml(step.label)}</strong>
-        <span>Ref ${escapeHtml(step.ref)}</span>
-      </div>
-      <select data-workflow="${step.id}">
-        ${["todo", "in-progress", "done", "blocked"].map((s) => `<option value="${s}" ${state.draft.workflow[step.id] === s ? "selected" : ""}>${s}</option>`).join("")}
-      </select>
-    </div>
-  `).join("");
-  els["workflow-list"].querySelectorAll("[data-workflow]").forEach((el) => {
-    el.addEventListener("change", () => {
-      state.draft.workflow[el.dataset.workflow] = el.value;
-      persist();
-      renderWorkflowOutput();
-    });
-  });
-  renderWorkflowOutput();
-}
-
-function renderWorkflowOutput() {
-  const report = runQualityGates(state.draft);
-  const done = WORKFLOW_STEPS.filter((s) => state.draft.workflow[s.id] === "done").length;
-  els["workflow-output"].textContent = [
-    `Workflow progress: ${done}/${WORKFLOW_STEPS.length} complete`,
-    `Current OpenClaw readiness: ${report.summary.toUpperCase()}`,
-    "",
-    "Required build order (this app stops at an upload-ready package):",
-    "1. Design the idea, scope, constraints, and friction sources.",
-    "2. Write the natural, complex, self-contained single-turn prompt.",
-    "3. Design atomic binary rubrics with at least one negative-weight criterion.",
-    "4. Add deterministic verifier tests and the safety review path.",
-    "5. Pass the OpenClaw quality gates or consciously accept warnings.",
-    "6. Mark the package upload-ready. Model comparison happens in the separate comparison tool.",
-  ].join("\n");
+// Stage 4 downstream sync: pull the verifier/template context from the package
+// that Stage 2 built, then mark the verifier stage ready. This is the explicit
+// "data flows from one stage to the next" link for the derived files.
+function syncTemplatesFromPackage() {
+  if (state.draft.pipeline.build) markStageComplete("verifier");
+  renderTemplates();
+  syncStageGates();
 }
 
 function renderTemplates() {
+  if (!els["template-kind"]) return;
   const kind = els["template-kind"].value;
   const report = runQualityGates(state.draft);
   const requiredKeys = extractArtifactKeys();
+  if (els["template-context"]) {
+    const family = (STARTERS[state.draft.starter] || STARTERS.operations).label;
+    els["template-context"].textContent = state.draft.pipeline.build
+      ? `synced from: ${family}`
+      : "build a package first";
+  }
   const templates = {
     memory: [
       "# MEMORY.md",
@@ -1345,18 +1523,27 @@ function pythonString(value) {
 }
 
 function renderRunner() {
+  if (!els["runner-output"]) return;
   const report = runQualityGates(state.draft);
+  const p = state.draft.pipeline;
+  const mark = (done) => (done ? "[x]" : "[ ]");
   const statusLines = [
     `Package: ${state.draft.runner.packageStatus}`,
     `Prompt: ${state.draft.runner.promptStatus}`,
     `Upload readiness: ${state.draft.runner.uploadStatus}`,
     "",
-    "Runner checklist:",
-    "- Build the package only after OpenClaw gates are passing or consciously accepted.",
-    "- Confirm the single-turn prompt is natural, complex, and self-contained.",
-    "- Confirm rubrics are atomic, binary, and include a negative-weight criterion.",
-    "- Apply the safety review and keep verifier tests deterministic.",
-    "- Mark the package upload-ready once gates pass; run model comparison in the separate comparison tool.",
+    "Pipeline progress:",
+    `${mark(p.design)} Stage 1 - task draft generated`,
+    `${mark(p.build)} Stage 2 - package built`,
+    `${mark(p.review)} Stage 3 - rubrics and gates reviewed`,
+    `${mark(p.verifier)} Stage 4 - verifier and templates synced`,
+    `${mark(p.ship)} Stage 5 - marked upload-ready`,
+    "",
+    "Ship checklist:",
+    "- Single-turn prompt is natural, complex, and self-contained.",
+    "- Rubrics are atomic, binary, and include a negative-weight criterion.",
+    "- Safety review applied; verifier tests stay deterministic.",
+    "- All OpenClaw quality gates pass before the upload gate unlocks.",
     "",
     `Current gate status: ${report.summary.toUpperCase()} (${report.fails} fail)`,
     "",
@@ -1614,10 +1801,10 @@ function renderDraftDependentViews() {
   renderStats();
   renderRubrics();
   renderGates();
-  renderWorkflow();
   renderTemplates();
   renderRunner();
   renderPackagePreview();
+  renderStage();
 }
 
 function renderAll() {
@@ -1627,10 +1814,10 @@ function renderAll() {
   syncFormFromDraft();
   renderRubrics();
   renderGates();
-  renderWorkflow();
   renderTemplates();
   renderRunner();
   renderAnswerHelper();
+  renderStage();
 }
 
 function escapeHtml(str) {
