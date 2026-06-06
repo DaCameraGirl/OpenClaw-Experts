@@ -21,7 +21,8 @@ Extract selectable text from the private OpenClaw PDF (output goes to gitignored
 
 ```powershell
 New-Item -ItemType Directory -Path data -Force
-node tools/extract-pdf-text.mjs "..\..\guidelines\OpenClaw RL – Guidelines.pdf" > data\openclaw-rl.txt
+# Use any PDF text extractor of your choice:
+# node tools/extract-pdf-text.mjs "..\OpenClaw RL – Guidelines.pdf" > data\openclaw-rl-full.txt
 ```
 
 No package install, no test runner — open `index.html` or serve over localhost.
@@ -46,8 +47,8 @@ Full extracted guideline text lives in gitignored `data/` and should not be comm
 
 All quality gates, checklist items, and bundled library content derive from:
 
-- `guidelines/OpenClaw RL – Guidelines.pdf` (primary)
-- `guidelines/OpenClawReviewerGuidelines.pdf` (reviewer superset)
+- `..\OpenClaw RL – Guidelines.pdf` (primary)
+- `..\OpenClawReviewerGuidelines.pdf` (reviewer superset)
 
 Do not port Selection Improvement Expert gates or TBench form fields into this app.
 
@@ -57,6 +58,9 @@ Do not port Selection Improvement Expert gates or TBench form fields into this a
 - `STARTERS` in `app.js` — scenario recipes used to generate prompt/rubric packages
 - `PIPELINE_STAGES` in `app.js` — the five ordered pipeline stages and their gating metadata
 - `runQualityGates(draft)` — live validation against OpenClaw rules
+- Quality gates include checks for all major guideline rules, including ST.5 (prompt-outcome alignment)
+- `ANSWER_INTENTS` in `app.js` — intent-matched answers for common question categories (rubrics, safety, prompts, etc.)
+- When no intent matches, the answer helper builds a dynamic answer from the loaded guideline evidence
 - Three tabs: **Pipeline**, **Library**, **Answer Helper**
 - The Pipeline tab is one gated workspace with five ordered stages, each unlocking the next once its output exists:
   1. **Design & Generate** — seed request + task family produce the full task draft and rubric

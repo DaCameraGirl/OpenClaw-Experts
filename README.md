@@ -20,7 +20,7 @@ This is the OpenClaw counterpart to `selection-improvement-experts`, but it does
 ## Quick Start
 
 ```powershell
-cd "C:\Users\enter\OneDrive\Desktop\OpenClaw\apps\OpenClaw-Experts"
+cd "C:\Users\angel\OneDrive\Desktop\OpenClaw\OpenClaw-Experts"
 python -m http.server 8000
 ```
 
@@ -77,8 +77,8 @@ data/openclaw-reviewer-full.txt
 They were created from:
 
 ```text
-C:\Users\enter\OneDrive\Desktop\OpenClaw\guidelines\OpenClaw RL – Guidelines.pdf
-C:\Users\enter\OneDrive\Desktop\OpenClaw\guidelines\OpenClawReviewerGuidelines.pdf
+..\OpenClaw RL – Guidelines.pdf
+..\OpenClawReviewerGuidelines.pdf
 ```
 
 Because `data/` is gitignored, those full guideline texts stay local.

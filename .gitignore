@@ -1,1 +1,6 @@
+# Data folder: full extracted PDF text — private, do not commit
+data/
 
+# OS files
+.DS_Store
+Thumbs.db
