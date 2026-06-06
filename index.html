@@ -14,18 +14,13 @@
           <div class="brand-mark" aria-hidden="true">OC</div>
           <div>
             <h1>OpenClaw Experts</h1>
-            <p>Idea, Prompt, Rubric, Linter, Verifier, Run</p>
+            <p>Staged task pipeline</p>
           </div>
         </div>
 
         <nav class="tabs" aria-label="Primary">
-          <button class="tab is-active" data-view="library" type="button">Library</button>
-          <button class="tab" data-view="task" type="button">Task Builder</button>
-          <button class="tab" data-view="rubrics" type="button">Rubric Lab</button>
-          <button class="tab" data-view="gates" type="button">Quality Gates</button>
-          <button class="tab" data-view="workflow" type="button">Workflow</button>
-          <button class="tab" data-view="templates" type="button">Templates</button>
-          <button class="tab" data-view="runner" type="button">Runner</button>
+          <button class="tab is-active" data-view="pipeline" type="button">Pipeline</button>
+          <button class="tab" data-view="library" type="button">Library</button>
           <button class="tab" data-view="answer" type="button">Answer Helper</button>
         </nav>
 
@@ -44,7 +39,7 @@
           </div>
         </div>
 
-        <p class="stats-note">All generated prompts, rubrics, gates, templates, and answers are OpenClaw-only.</p>
+        <p class="stats-note">Every prompt, rubric, gate, verifier, and answer is OpenClaw-only.</p>
         <p class="source-note">Bundled source: <code>openclaw-rules.json</code></p>
 
         <div class="storage-actions">
@@ -61,9 +56,9 @@
         <header class="workspace-intro">
           <div>
             <p class="eyebrow">OpenClaw RL Guidelines engine</p>
-            <h2>Generate the prompt, rubric, verifier, and run plan.</h2>
+            <h2>One staged pipeline: design, build, review, verify, ship.</h2>
           </div>
-          <p>Pick a hard OpenClaw coding scenario, generate the task, lint the package, build the verifier, then compare Model A, Model B, and Silver.</p>
+          <p>Each stage feeds the next. Generate the task, build and gate the package, review rubrics, derive the verifier, and mark it upload-ready - all OpenClaw, all in the browser.</p>
         </header>
 
         <section class="topbar" aria-label="Search">
@@ -74,9 +69,242 @@
           <button id="sample-data" type="button">Reload OpenClaw Rules</button>
         </section>
 
-        <section class="view is-visible" id="view-library">
+        <!-- ====================== PIPELINE VIEW ====================== -->
+        <section class="view is-visible" id="view-pipeline">
           <div class="view-desc">
-            <strong>Library</strong> - OpenClaw guideline sections and custom reviewer notes. The complete text is searchable and editable locally.
+            <strong>Pipeline</strong> - Five OpenClaw stages run in order. Each stage unlocks the next only once its output exists, so the package you ship is the package every stage actually checked.
+          </div>
+
+          <!-- Numbered stage rail: each step gates the next -->
+          <nav class="stage-rail" aria-label="Pipeline stages" id="stage-rail"></nav>
+
+          <!-- STAGE 1 - DESIGN & GENERATE -->
+          <section class="stage-panel is-active-stage" id="stage-design" data-stage="design">
+            <div class="panel wide-panel generator-panel">
+              <div>
+                <p class="eyebrow">Stage 1 - Design &amp; Generate</p>
+                <h2>Pick a hard OpenClaw scenario and generate the full task + rubric draft.</h2>
+              </div>
+              <div class="generator-actions">
+                <label>
+                  Source seed request
+                  <textarea id="seed-request" rows="3" placeholder="Paste the real user request, repo problem, or reviewer idea. The generator builds from this instead of canned prompts."></textarea>
+                </label>
+                <label>
+                  Task family
+                  <select id="starter"></select>
+                </label>
+                <button id="fill-starter" class="primary large-action" type="button">1. Generate full task + rubric</button>
+                <button id="regenerate-prompt" type="button">Regenerate prompt</button>
+                <button id="improve-draft" type="button">Auto-fill missing pieces</button>
+              </div>
+            </div>
+
+            <div class="recipe-grid" aria-label="OpenClaw recipes"></div>
+
+            <div class="panel wide-panel">
+              <div class="panel-header">
+                <h2>OpenClaw Task Draft</h2>
+                <div class="inline-actions">
+                  <span id="app-version" class="version-chip"></span>
+                  <button id="clear-draft" type="button">Clear draft</button>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  Task type
+                  <select id="task-type">
+                    <option value="single-turn">Single-Turn Standard</option>
+                    <option value="multi-turn">Multi-Turn</option>
+                    <option value="safety">Safety Failure</option>
+                  </select>
+                </label>
+                <label>
+                  Required installed skill
+                  <input id="required-skill" placeholder="e.g. google-drive, gmail, browser" />
+                </label>
+              </div>
+
+              <label>
+                Generated prompt
+                <textarea id="single-turn-prompt" rows="7" placeholder="Click Generate. This becomes the exact single-turn prompt the agent receives."></textarea>
+              </label>
+              <label>
+                Agent Objective
+                <textarea id="agent-objective" placeholder="Persona, real-world problem, context, and high-level success."></textarea>
+              </label>
+              <label>
+                Core Functionalities
+                <textarea id="core-functionalities" placeholder="Observable capabilities: acquisition, decision logic, state tracking, structured artifact."></textarea>
+              </label>
+              <label>
+                Build Complexity / difficulty plan
+                <textarea id="build-complexity" placeholder="Friction, conflicts, ambiguity, and hidden failure modes that force a weak trajectory to lose at least 50% of rubric score."></textarea>
+              </label>
+              <label>
+                Desired Outcome
+                <textarea id="desired-outcome" placeholder="Concrete, verifiable end state: file path, format, required fields."></textarea>
+              </label>
+              <div class="form-grid">
+                <label>
+                  Environment and baseline parity notes
+                  <textarea id="environment-notes" placeholder="Live test accounts only. Reproducible equivalent starting state."></textarea>
+                </label>
+                <label>
+                  Tool systems
+                  <textarea id="tool-systems" placeholder="Email, calendar, docs, filesystem, browser, GitHub, etc."></textarea>
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>
+                  MEMORY.md plan
+                  <textarea id="memory-plan" placeholder="What durable facts must be persisted and how they affect the final artifact."></textarea>
+                </label>
+                <label>
+                  Unit tests (only if deterministic)
+                  <textarea id="unit-tests" placeholder="Only deterministic structure checks; use rubrics for flexible quality."></textarea>
+                </label>
+              </div>
+              <label>
+                Safety review notes
+                <textarea id="safety-notes" placeholder="Safety check, F1-F8/T0-T3 annotation path if relevant."></textarea>
+              </label>
+              <label>
+                Upload / package plan
+                <textarea id="upload-notes" placeholder="Package folder: prompt, rubrics, verifier, desired outcome, MEMORY.md, artifacts, labels."></textarea>
+              </label>
+            </div>
+
+            <div class="stage-foot">
+              <p class="stage-foot-note" id="design-foot-note">Generate a draft to unlock Stage 2.</p>
+              <button id="goto-build" class="primary stage-next" type="button" disabled>Continue to Build Package -&gt;</button>
+            </div>
+          </section>
+
+          <!-- STAGE 2 - BUILD PACKAGE -->
+          <section class="stage-panel" id="stage-build" data-stage="build">
+            <div class="panel wide-panel">
+              <div class="panel-header">
+                <h2>Stage 2 - Build Package</h2>
+                <div class="inline-actions">
+                  <button id="build-package" class="primary" type="button">2. Build Package</button>
+                  <button id="copy-package" type="button">Copy Package</button>
+                  <button id="download-package" type="button">Download</button>
+                </div>
+              </div>
+              <p class="helper-copy">Assembles the paste-ready OpenClaw fields from your Stage 1 draft and runs every quality gate. A blocked gate set keeps Stage 3 review open but holds the upload gate locked.</p>
+              <div id="package-output" class="package-block">Build a package to see paste-ready OpenClaw fields here.</div>
+            </div>
+            <div class="stage-foot">
+              <p class="stage-foot-note" id="build-foot-note">Build the package to unlock Stage 3.</p>
+              <button id="goto-review" class="primary stage-next" type="button" disabled>Continue to Review -&gt;</button>
+            </div>
+          </section>
+
+          <!-- STAGE 3 - RUBRICS & GATES REVIEW -->
+          <section class="stage-panel" id="stage-review" data-stage="review">
+            <div class="review-stack">
+              <details class="review-panel" open>
+                <summary>Quality Gates</summary>
+                <div id="gate-summary"></div>
+                <div id="gate-list" class="gate-list"></div>
+              </details>
+              <details class="review-panel">
+                <summary>Rubric Criteria</summary>
+                <div class="inline-actions rubric-actions">
+                  <button id="add-rubric-set" class="primary" type="button">Generate recommended set</button>
+                  <button id="add-rubric" type="button">Add Criterion</button>
+                  <button id="copy-rubrics" type="button">Copy JSON</button>
+                </div>
+                <div id="rubric-list"></div>
+              </details>
+              <details class="review-panel">
+                <summary>Rule Coverage &amp; Audit</summary>
+                <div id="coverage-list" class="coverage-list"></div>
+                <pre id="audit-output" class="package-block compact"></pre>
+              </details>
+            </div>
+            <div class="stage-foot">
+              <p class="stage-foot-note" id="review-foot-note">Review gates and rubrics, then continue to derive the verifier.</p>
+              <button id="goto-verifier" class="primary stage-next" type="button" disabled>Continue to Verifier -&gt;</button>
+            </div>
+          </section>
+
+          <!-- STAGE 4 - VERIFIER & TEMPLATES (downstream sync) -->
+          <section class="stage-panel" id="stage-verifier" data-stage="verifier">
+            <div class="panel wide-panel">
+              <div class="panel-header">
+                <h2>Stage 4 - Verifier &amp; Templates</h2>
+                <div class="inline-actions">
+                  <span id="template-context" class="version-chip">build a package first</span>
+                  <select id="template-kind">
+                    <option value="verifier">Verifier stub</option>
+                    <option value="memory">MEMORY.md</option>
+                    <option value="rubric">Rubric JSON</option>
+                    <option value="upload">Upload folders</option>
+                    <option value="safety">Safety annotation</option>
+                  </select>
+                  <button id="refresh-templates" type="button">Sync from package</button>
+                  <button id="copy-template" type="button">Copy Template</button>
+                </div>
+              </div>
+              <p class="helper-copy">These files are derived from the package built in Stage 2 - the verifier keys come from your Desired Outcome and the rubric JSON mirrors Stage 3. Fill every TODO and keep deterministic tests to locked outputs only.</p>
+              <pre id="template-output" class="package-block tall">Build a package in Stage 2, then sync.</pre>
+            </div>
+            <div class="stage-foot">
+              <p class="stage-foot-note" id="verifier-foot-note">Sync the verifier, then continue to upload readiness.</p>
+              <button id="goto-ship" class="primary stage-next" type="button" disabled>Continue to Ship -&gt;</button>
+            </div>
+          </section>
+
+          <!-- STAGE 5 - UPLOAD READY -->
+          <section class="stage-panel" id="stage-ship" data-stage="ship">
+            <div class="split stacked-mobile">
+              <form id="runner-form" class="panel">
+                <div class="panel-header"><h2>Stage 5 - Upload Readiness</h2></div>
+                <label>
+                  Package
+                  <select id="package-status">
+                    <option value="not-built">not-built</option>
+                    <option value="needs-fixes">needs-fixes</option>
+                    <option value="built">built</option>
+                  </select>
+                </label>
+                <label>
+                  Prompt
+                  <select id="prompt-status">
+                    <option value="draft">draft</option>
+                    <option value="reviewed">reviewed</option>
+                    <option value="locked">locked</option>
+                  </select>
+                </label>
+                <label>
+                  Upload readiness
+                  <select id="upload-status">
+                    <option value="not-ready">not-ready</option>
+                    <option value="needs-fixes">needs-fixes</option>
+                    <option value="ready">ready</option>
+                  </select>
+                </label>
+                <label>
+                  Runner notes
+                  <textarea id="runner-notes" rows="6" placeholder="Paste run notes, rubric score summary, or upload blockers."></textarea>
+                </label>
+                <button id="mark-upload-ready" class="primary" type="button" disabled>Mark package upload-ready</button>
+              </form>
+              <div class="panel">
+                <div class="panel-header"><h2>Ship Checklist</h2></div>
+                <pre id="runner-output" class="package-block"></pre>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <!-- ====================== LIBRARY VIEW ====================== -->
+        <section class="view" id="view-library">
+          <div class="view-desc">
+            <strong>Library</strong> - OpenClaw guideline sections and custom reviewer notes. The complete text is searchable from the bar above and feeds the Answer Helper.
           </div>
           <div class="split">
             <form id="guide-form" class="panel" autocomplete="off">
@@ -110,280 +338,7 @@
           </div>
         </section>
 
-        <section class="view" id="view-task">
-          <div class="view-desc">
-            <strong>Task Builder</strong> - Choose a scenario, generate the complete prompt and rubric, then edit the draft to fit your real live environment.
-          </div>
-
-          <div class="panel wide-panel generator-panel">
-            <div>
-              <p class="eyebrow">Generator</p>
-              <h2>One click creates the prompt, rubrics, desired outcome, MEMORY.md plan, and upload plan.</h2>
-            </div>
-            <div class="generator-actions">
-              <label>
-                Source seed request
-                <textarea id="seed-request" rows="3" placeholder="Paste the real user request, repo problem, reviewer idea, or source inspiration. The generator builds from this instead of canned prompts."></textarea>
-              </label>
-              <label>
-                Task family
-                <select id="starter">
-                  <option value="gitRecovery">Git - Force-Push Recovery</option>
-                  <option value="typescriptBug">TypeScript - Conditional Type Bug</option>
-                  <option value="reactRace">React - Stale Closure Race</option>
-                  <option value="weeklyHealth">Weekly Health Report</option>
-                  <option value="subscriptionOptimizer">Subscription Optimizer</option>
-                  <option value="dinnerCoordinator">Group Dinner Coordinator</option>
-                  <option value="contractRisk">Contract Risk Extractor</option>
-                  <option value="highStakesSafety">Safety - High-Stakes Action</option>
-                  <option value="operations">Operations coordination</option>
-                  <option value="research">Research synthesis</option>
-                  <option value="support">Customer support triage</option>
-                </select>
-              </label>
-              <button id="fill-starter" class="primary large-action" type="button">Generate full task + rubric</button>
-              <button id="regenerate-prompt" type="button">Regenerate prompt</button>
-              <button id="improve-draft" type="button">Auto-fill missing pieces</button>
-            </div>
-          </div>
-
-          <div class="recipe-grid" aria-label="OpenClaw recipes">
-            <button class="recipe-card" type="button" data-recipe="gitRecovery"><strong>Git - Force-Push Recovery</strong><span>Recover lost work after a bad force-push using real Git evidence.</span></button>
-            <button class="recipe-card" type="button" data-recipe="typescriptBug"><strong>TypeScript - Conditional Type Bug</strong><span>Fix a type-level bug without weakening strictness.</span></button>
-            <button class="recipe-card" type="button" data-recipe="reactRace"><strong>React - Stale Closure Race</strong><span>Fix an async UI race without masking the bug.</span></button>
-            <button class="recipe-card" type="button" data-recipe="weeklyHealth"><strong>Weekly Health Report</strong><span>Pulls multi-source health data into one structured weekly report.</span></button>
-            <button class="recipe-card" type="button" data-recipe="contractRisk"><strong>Contract Risk Extractor</strong><span>Extracts obligations and flags cross-contract deadline conflicts.</span></button>
-            <button class="recipe-card" type="button" data-recipe="highStakesSafety"><strong>Safety - High-Stakes Action</strong><span>Probes confirmation before irreversible action.</span></button>
-          </div>
-
-          <div class="panel wide-panel">
-            <div class="panel-header">
-              <h2>OpenClaw Task Draft</h2>
-              <div class="inline-actions">
-                <span id="app-version" class="version-chip"></span>
-                <button id="build-package" class="primary" type="button">Build Package</button>
-                <button id="copy-package" type="button">Copy Package</button>
-                <button id="download-package" type="button">Download</button>
-                <button id="clear-draft" type="button">Clear</button>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <label>
-                Task type
-                <select id="task-type">
-                  <option value="single-turn">Single-Turn Standard</option>
-                  <option value="multi-turn">Multi-Turn</option>
-                  <option value="safety">Safety Failure</option>
-                </select>
-              </label>
-              <label>
-                Required installed skill
-                <input id="required-skill" placeholder="e.g. google-drive, gmail, browser" />
-              </label>
-            </div>
-
-            <label>
-              Generated prompt
-              <textarea id="single-turn-prompt" rows="7" placeholder="Click Generate full task + rubric. This becomes the exact prompt for Model A and Model B."></textarea>
-            </label>
-            <label>
-              Agent Objective
-              <textarea id="agent-objective" placeholder="Persona, real-world problem, context, and high-level success."></textarea>
-            </label>
-            <label>
-              Core Functionalities
-              <textarea id="core-functionalities" placeholder="Observable capabilities: acquisition, decision logic, state tracking, structured artifact."></textarea>
-            </label>
-            <label>
-              Build Complexity / Model A failure plan
-              <textarea id="build-complexity" placeholder="Friction points and why Model A should fail at least 50% of rubric score."></textarea>
-            </label>
-            <label>
-              Desired Outcome
-              <textarea id="desired-outcome" placeholder="Concrete, verifiable end state: file path, format, required fields."></textarea>
-            </label>
-            <div class="form-grid">
-              <label>
-                Environment and baseline parity notes
-                <textarea id="environment-notes" placeholder="Live test accounts only. Equivalent starting state for Model A and Model B."></textarea>
-              </label>
-              <label>
-                Tool systems
-                <textarea id="tool-systems" placeholder="Email, calendar, docs, filesystem, browser, GitHub, etc."></textarea>
-              </label>
-            </div>
-            <div class="form-grid">
-              <label>
-                MEMORY.md plan
-                <textarea id="memory-plan" placeholder="What durable facts must be persisted and how they affect the final artifact."></textarea>
-              </label>
-              <label>
-                Unit tests (only if deterministic)
-                <textarea id="unit-tests" placeholder="Only deterministic structure checks; use rubrics for flexible quality."></textarea>
-              </label>
-            </div>
-            <div class="form-grid">
-              <label>
-                Safety review notes
-                <textarea id="safety-notes" placeholder="Safety check, F1-F8/T0-T3 annotation path if relevant."></textarea>
-              </label>
-              <label>
-                Model A expectation
-                <textarea id="model-a-notes" placeholder="Expected weak trajectory and likely failures."></textarea>
-              </label>
-            </div>
-            <div class="form-grid">
-              <label>
-                Model B expectation
-                <textarea id="model-b-notes" placeholder="Expected strong trajectory."></textarea>
-              </label>
-              <label>
-                Silver trajectory plan
-                <textarea id="silver-notes" placeholder="Clone best model trajectory and continue until all rubrics pass."></textarea>
-              </label>
-            </div>
-            <label>
-              Upload / folder plan
-              <textarea id="upload-notes" placeholder="Model A folder, Model B folder, Silver folder, trajectories, artifacts, labels."></textarea>
-            </label>
-          </div>
-
-          <div class="panel wide-panel">
-            <div class="panel-header"><h2>Task Package Output</h2></div>
-            <div id="package-output" class="package-block">Build a package to see paste-ready OpenClaw fields here.</div>
-          </div>
-        </section>
-
-        <section class="view" id="view-rubrics">
-          <div class="view-desc">
-            <strong>Rubric Lab</strong> - The generator creates weighted OpenClaw criteria. Edit or replace them here.
-          </div>
-          <div class="panel wide-panel">
-            <div class="panel-header">
-              <h2>Rubric Criteria</h2>
-              <div class="inline-actions">
-                <button id="add-rubric-set" class="primary" type="button">Generate recommended set</button>
-                <button id="add-rubric" type="button">Add Criterion</button>
-                <button id="copy-rubrics" type="button">Copy JSON</button>
-              </div>
-            </div>
-            <div id="rubric-list"></div>
-          </div>
-        </section>
-
-        <section class="view" id="view-gates">
-          <div class="view-desc">
-            <strong>Quality Gates</strong> - OpenClaw-only checks for live environment, parity, Skills, MEMORY.md, prompt quality, rubrics, unit tests, safety, silver, and upload.
-          </div>
-          <div class="split stacked-mobile">
-            <div class="panel">
-              <div class="panel-header">
-                <h2>OpenClaw Quality Gates</h2>
-                <div id="gate-summary"></div>
-              </div>
-              <div id="gate-list" class="gate-list"></div>
-            </div>
-            <div class="panel">
-              <div class="panel-header"><h2>Rule Coverage</h2></div>
-              <div id="coverage-list" class="coverage-list"></div>
-              <pre id="audit-output" class="package-block compact"></pre>
-            </div>
-          </div>
-        </section>
-
-        <section class="view" id="view-workflow">
-          <div class="view-desc">
-            <strong>Workflow</strong> - Track the six OpenClaw execution steps after the generated package is ready.
-          </div>
-          <div class="split stacked-mobile">
-            <div class="panel">
-              <div class="panel-header"><h2>6-Step Workflow</h2></div>
-              <div id="workflow-list" class="workflow-list"></div>
-            </div>
-            <div class="panel">
-              <div class="panel-header"><h2>Execution Notes</h2></div>
-              <pre id="workflow-output" class="package-block"></pre>
-            </div>
-          </div>
-        </section>
-
-        <section class="view" id="view-templates">
-          <div class="view-desc">
-            <strong>Templates</strong> - Generated helper files for MEMORY.md, rubric JSON, deterministic verifier stubs, safety annotation, and upload folders.
-          </div>
-          <div class="panel wide-panel">
-            <div class="panel-header">
-              <h2>Generated Template</h2>
-              <div class="inline-actions">
-                <select id="template-kind">
-                  <option value="memory">MEMORY.md</option>
-                  <option value="rubric">Rubric JSON</option>
-                  <option value="verifier">Verifier stub</option>
-                  <option value="upload">Upload folders</option>
-                  <option value="safety">Safety annotation</option>
-                </select>
-                <button id="copy-template" type="button">Copy Template</button>
-              </div>
-            </div>
-            <pre id="template-output" class="package-block tall"></pre>
-          </div>
-        </section>
-
-        <section class="view" id="view-runner">
-          <div class="view-desc">
-            <strong>Runner</strong> - Static run tracker for package status, Model A, Model B, Silver, and extraction/upload readiness.
-          </div>
-          <div class="split stacked-mobile">
-            <form id="runner-form" class="panel">
-              <div class="panel-header"><h2>Run Status</h2></div>
-              <label>
-                Package
-                <select id="package-status">
-                  <option value="not-built">not-built</option>
-                  <option value="needs-fixes">needs-fixes</option>
-                  <option value="built">built</option>
-                </select>
-              </label>
-              <label>
-                Model A
-                <select id="model-a-status">
-                  <option value="not-run">not-run</option>
-                  <option value="running">running</option>
-                  <option value="extracted">extracted</option>
-                  <option value="failed">failed</option>
-                </select>
-              </label>
-              <label>
-                Model B
-                <select id="model-b-status">
-                  <option value="not-run">not-run</option>
-                  <option value="running">running</option>
-                  <option value="extracted">extracted</option>
-                  <option value="failed">failed</option>
-                </select>
-              </label>
-              <label>
-                Silver
-                <select id="silver-status">
-                  <option value="not-started">not-started</option>
-                  <option value="cloned">cloned</option>
-                  <option value="continued">continued</option>
-                  <option value="passes-rubrics">passes-rubrics</option>
-                </select>
-              </label>
-              <label>
-                Runner notes
-                <textarea id="runner-notes" rows="8" placeholder="Paste run notes, extraction state, rubric score summary, or upload blockers."></textarea>
-              </label>
-            </form>
-            <div class="panel">
-              <div class="panel-header"><h2>Runner Checklist</h2></div>
-              <pre id="runner-output" class="package-block"></pre>
-            </div>
-          </div>
-        </section>
-
+        <!-- ====================== ANSWER HELPER VIEW ====================== -->
         <section class="view" id="view-answer">
           <div class="view-desc">
             <strong>Answer Helper</strong> - Ask an OpenClaw guideline question. The helper answers from the loaded RL and Reviewer guidelines, then shows the evidence it used.
@@ -405,6 +360,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=openclaw-rl-v10"></script>
+    <script src="app.js?v=openclaw-rl-v12"></script>
   </body>
 </html>

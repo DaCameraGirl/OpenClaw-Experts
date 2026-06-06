@@ -9,13 +9,13 @@ This is the OpenClaw counterpart to `selection-improvement-experts`, but it does
 | Workspace | Purpose |
 | --- | --- |
 | Library | Search and edit bundled OpenClaw rules plus local reviewer notes |
-| Task Builder | Generate the full prompt, objective, desired outcome, MEMORY.md plan, silver plan, upload plan, and rubric |
+| Task Builder | Generate the full prompt, objective, desired outcome, MEMORY.md plan, upload plan, and rubric |
 | Rubric Lab | Edit generated weighted rubrics and validate atomic positive criteria |
-| Quality Gates | Audit live environment, parity, Skills, MEMORY.md, prompt, rubrics, unit tests, safety, silver, and upload |
-| Workflow | Track the six-step OpenClaw execution path |
-| Templates | Generate MEMORY.md, rubric JSON, verifier stub, safety annotation, and upload folder templates |
-| Runner | Track Model A, Model B, Silver, and extraction/upload readiness |
-| Answer Helper | Match saved rules to onboarding or reviewer questions |
+| Quality Gates | Audit live environment, parity, Skills, MEMORY.md, prompt, rubrics, unit tests, safety, and upload readiness |
+| Workflow | Track the six-step OpenClaw path from idea through rubric to an upload-ready package |
+| Templates | Generate MEMORY.md, rubric JSON, verifier stub, safety annotation, and upload package templates |
+| Runner | Track package status, prompt status, and upload readiness |
+| Answer Helper | Classify a guideline question by intent and return a synthesized OpenClaw answer plus supporting evidence |
 
 ## Quick Start
 
@@ -31,6 +31,22 @@ http://localhost:8000
 ```
 
 No build step, package install, or backend is required.
+
+## Desktop Launcher (crab claw 🦀)
+
+For a one-click launch with a crab-claw icon on your desktop:
+
+1. Run the shortcut installer once — right-click `Create-Desktop-Shortcut.ps1` and choose **Run with PowerShell**.
+2. A **OpenClaw Experts** shortcut with the crab-claw icon appears on your Desktop.
+3. Double-click it. The launcher (`OpenClaw-Experts-Launcher.ps1`) starts a local server on port 8010 and opens the app in your browser automatically.
+
+| File | Role |
+| --- | --- |
+| `openclaw-claw.ico` | Crab-claw desktop icon (16–256px) |
+| `Create-Desktop-Shortcut.ps1` | Creates the Desktop shortcut (run once) |
+| `OpenClaw-Experts-Launcher.ps1` | Starts the local server and opens the app |
+
+No manual `python -m http.server` step is needed when using the shortcut.
 
 ## Key Files
 
