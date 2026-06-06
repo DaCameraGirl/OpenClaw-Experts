@@ -42,6 +42,22 @@
         <p class="stats-note">Every prompt, rubric, gate, verifier, and answer is OpenClaw-only.</p>
         <p class="source-note">Bundled source: <code>openclaw-rules.json</code></p>
 
+        <details class="api-section">
+          <summary>DeepSeek API (optional)</summary>
+          <p class="stats-note">Uses your DeepSeek key for real Q&A answers from the guidelines.</p>
+          <label>
+            API Key
+            <input type="password" id="api-key" placeholder="sk-..." autocomplete="off" />
+          </label>
+          <label>
+            Model
+            <select id="api-model">
+              <option value="deepseek-chat">deepseek-chat</option>
+              <option value="deepseek-reasoner">deepseek-reasoner</option>
+            </select>
+          </label>
+        </details>
+
         <div class="storage-actions">
           <button id="export-data" type="button">Export backup</button>
           <label class="file-button">
@@ -174,6 +190,33 @@
                 Upload / package plan
                 <textarea id="upload-notes" placeholder="Package folder: prompt, rubrics, verifier, desired outcome, MEMORY.md, artifacts, labels."></textarea>
               </label>
+              <details style="margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--panel-soft);">
+                <summary style="cursor: pointer; font-weight: 700; color: var(--accent);">Sourcing / Inspiration (required by reviewer rules)</summary>
+                <div class="form-grid" style="margin-top: 10px;">
+                  <label>
+                    Source name
+                    <input id="source-name" placeholder="e.g. Reddit, Twitter/X, TikTok" />
+                  </label>
+                  <label>
+                    Source link (direct URL)
+                    <input id="source-url" placeholder="https://reddit.com/r/OpenClaw/..." />
+                  </label>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Screenshot URL (jpg/jpeg/png)
+                    <input id="source-screenshot-url" placeholder="https://i.imgur.com/..." />
+                  </label>
+                  <label>
+                    Date of retrieval
+                    <input id="source-retrieval-date" placeholder="e.g. 2026-06-05" />
+                  </label>
+                </div>
+                <label>
+                  Source notes / authenticity confirmation
+                  <textarea id="source-notes" rows="2" placeholder="Confirm this is a real public OpenClaw discussion, not LLM-generated or hypothetical."></textarea>
+                </label>
+              </details>
             </div>
 
             <div class="stage-foot">
@@ -243,6 +286,7 @@
                     <option value="memory">MEMORY.md</option>
                     <option value="rubric">Rubric JSON</option>
                     <option value="upload">Upload folders</option>
+                    <option value="sourcing">Sourcing / Inspiration</option>
                     <option value="safety">Safety annotation</option>
                   </select>
                   <button id="refresh-templates" type="button">Sync from package</button>
@@ -341,25 +385,30 @@
         <!-- ====================== ANSWER HELPER VIEW ====================== -->
         <section class="view" id="view-answer">
           <div class="view-desc">
-            <strong>Answer Helper</strong> - Ask an OpenClaw guideline question. The helper answers from the loaded RL and Reviewer guidelines, then shows the evidence it used.
+            <strong>Answer Helper</strong> - Ask anything about the OpenClaw guidelines. I search the loaded RL and Reviewer guidelines and show the evidence.
           </div>
           <div class="split stacked-mobile">
             <div class="panel">
-              <label>
-                Your question
-                <textarea id="answer-question" rows="6" placeholder="Example: When do I use unit tests vs rubrics in OpenClaw?"></textarea>
-              </label>
-              <pre id="answer-outline" class="package-block">Ask a question to get an OpenClaw-guideline answer.</pre>
+              <div id="answer-chat" class="chat-log">
+                <div class="chat-msg bot">
+                  **Hi.** Ask me about rubrics, prompts, safety, sourcing, verifiers, MEMORY.md, environments — whatever you're working on. I'll pull the relevant guideline rules and show you the source.
+                </div>
+              </div>
+              <div class="chat-input-row">
+                <input type="text" id="answer-input" placeholder="Ask about the guidelines..." autocomplete="off" />
+                <button id="answer-send" type="button">Ask</button>
+              </div>
             </div>
             <div class="panel">
               <div class="panel-header"><h2>Evidence Used</h2></div>
-              <div id="answer-rules"></div>
+              <div id="answer-rules"><p class="empty-note">Ask a question to see the guideline rules I used.</p></div>
             </div>
           </div>
         </section>
       </main>
     </div>
 
-    <script src="app.js?v=openclaw-rl-v12"></script>
+    <script src="env-config.js"></script>
+    <script src="app.js?v=openclaw-rl-v13"></script>
   </body>
 </html>
