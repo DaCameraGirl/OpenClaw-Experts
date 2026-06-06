@@ -1567,15 +1567,27 @@ function renderAnswerHelper() {
 
   els["answer-outline"].textContent = buildOpenClawAnswer(rawQuestion, intent, hits);
 
-  els["answer-rules"].innerHTML = hits.map((r) => `
-    <div class="rule-hit">
-      <div class="num">${escapeHtml(r.guideTitle)}</div>
-      <p>${escapeHtml(r.text)}</p>
-    </div>
-  `).join("") || `<p class="empty-note">No direct evidence hit for this wording. The answer above still uses the built-in OpenClaw guideline rules.</p>`;
+  const grouped = {};
+  hits.forEach((h) => {
+    const key = h.guideTitle || "General";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(h);
+  });
+  els["answer-rules"].innerHTML = Object.keys(grouped).length
+    ? Object.keys(grouped).map((section) => `
+      <div class="evidence-group">
+        <div class="evidence-group-title">${escapeHtml(section)}</div>
+        ${grouped[section].map((r) => `
+          <div class="rule-hit">
+            <p>${escapeHtml(r.text)}</p>
+          </div>
+        `).join("")}
+      </div>
+    `).join("")
+    : `<p class="empty-note">No direct rule match for that wording.</p>`;
 }
 
-// --- Answer Helper: intent classification + template synthesis + evidence ranking ---
+// --- Answer Helper: intent classification + dynamic evidence synthesis ---
 
 const ANSWER_STOPWORDS = new Set([
   "the", "and", "for", "are", "but", "not", "you", "your", "with", "that", "this",
@@ -1585,8 +1597,8 @@ const ANSWER_STOPWORDS = new Set([
   "make", "made", "need", "want", "i", "im", "is", "it", "a", "an", "of", "to", "in", "on", "or", "my",
 ]);
 
-// Each intent maps the question to a pre-built, OpenClaw-specific guided answer
-// and the guideline refs/keywords used to rank supporting evidence afterward.
+// Intent classification directs the evidence ranking toward relevant sections.
+// Answers are always built dynamically from whatever rules are loaded — no hardcoded lines.
 const ANSWER_INTENTS = [
   {
     id: "prompt-difficulty",
@@ -1594,17 +1606,6 @@ const ANSWER_INTENTS = [
     keywords: ["difficulty", "complex", "friction", "fail", "differentiat", "rubric", "edge", "ambiguity", "conflict", "hard"],
     refs: ["1.2.3", "1.3.4", "1.3.5", "ST.1", "ST.3", "3.1", "69.1"],
     title: "making prompts harder",
-    lines: [
-      "Difficulty in an OpenClaw prompt comes from the task itself, not from telling the model the steps. A strong prompt forces a single coherent agent run to survive real friction:",
-      "",
-      "1. Multi-constraint requirements: several requirements that all must hold at once, so a partial solution visibly fails part of the rubric.",
-      "2. Conflicting requirements to reconcile: two reasonable goals that pull against each other, so the agent has to make and justify a trade-off.",
-      "3. Ambiguous-but-resolvable conditions: enough signal in the data to pick the right interpretation, but only if the agent actually inspects it and states its assumption.",
-      "4. Hidden failure modes and edge cases: messy, missing, or misleading data that a shallow trajectory will mishandle.",
-      "5. An unsafe shortcut that looks tempting but breaks the desired outcome, so over-eager agents lose negative-weight rubrics.",
-      "",
-      "Keep the friction in the task and the Build Complexity notes, never as step-by-step architecture in the user prompt (ST.3). The bar is that a weaker trajectory should fail at least half the rubric weight on a non-safety task (1.2.3), which is what real differentiation looks like (1.3.5).",
-    ],
   },
   {
     id: "role-workflow",
@@ -1612,19 +1613,6 @@ const ANSWER_INTENTS = [
     keywords: ["workflow", "step", "design", "prompt", "rubric", "evaluate", "safety", "upload", "objective", "role"],
     refs: ["1.1", "1.2", "4.1", "4.5", "4.6", "2.3", "3.2"],
     title: "your role and the OpenClaw workflow",
-    lines: [
-      "Your role is to design a complete OpenClaw task package that tests whether an LLM agent can do realistic end-to-end work in a live environment, and to make that package pass the OpenClaw quality bar.",
-      "",
-      "The workflow you own, in order, is:",
-      "1. Ideation: define the persona, the concrete real-world problem, scope, and constraints.",
-      "2. Prompt writing: turn the idea into one natural, complex, self-contained single-turn prompt with no architecture steps revealed.",
-      "3. Rubric design: write atomic, binary PRESENT / NOT PRESENT criteria, weighted only with +/-5, +/-3, +/-1, including at least one negative-weight criterion.",
-      "4. Trajectory evaluation: score a run against those rubrics and add deterministic verifier tests only where a value is fully locked by the prompt and data.",
-      "5. Safety review: check for doing too much, doing too little, and F8 over-refusal before trusting any score.",
-      "6. Upload readiness: confirm gates pass, then package the prompt, rubrics, verifier, desired outcome, MEMORY.md, and artifacts for upload.",
-      "",
-      "Comparing candidate models against each other happens later in a separate comparison tool, so inside this app you stop at a clean, gate-passing, upload-ready package.",
-    ],
   },
   {
     id: "rubric",
@@ -1632,21 +1620,6 @@ const ANSWER_INTENTS = [
     keywords: ["rubric", "present", "weight", "atomic", "criterion", "negative", "binary", "self-contained"],
     refs: ["3.2", "62.3", "61.2", "63.2", "78.1", "82.1", "69.1"],
     title: "how rubrics must be written",
-    lines: [
-      "Rubrics are binary checks against the model response: each one is either PRESENT or NOT PRESENT, and the weight carries the polarity.",
-      "",
-      "Write each criterion so it is:",
-      "1. Atomic: it tests exactly one observable thing.",
-      "2. Self-contained: it can be judged from the response alone, without re-reading the prompt.",
-      "3. Positive in phrasing: state what the response must contain, never 'does not' or 'must not' (63.2).",
-      "",
-      "A safe format is:",
-      "The response must [one concrete observable requirement].",
-      "PRESENT when: [the exact evidence that proves it].",
-      "NOT PRESENT when: [the exact threshold that is missing, phrased without double negatives].",
-      "",
-      "Use only the weights +5, +3, +1, -1, -3, -5, include at least one negative-weight criterion (78.1), give every critical step toward the Desired Outcome at least one rubric (69.1), and avoid a positive and a negative criterion that measure the same thing.",
-    ],
   },
   {
     id: "prompt-rules",
@@ -1654,16 +1627,6 @@ const ANSWER_INTENTS = [
     keywords: ["prompt", "single-turn", "natural", "self-contained", "follow-up", "realistic", "architecture"],
     refs: ["ST.1", "ST.2", "ST.3", "ST.5", "1.2.3", "1.3.4"],
     title: "what the prompt must contain",
-    lines: [
-      "The prompt is the exact user request the agent receives, so it has to read like a real person asking for help, while still being hard enough to separate model quality.",
-      "",
-      "It must be:",
-      "1. Natural and self-contained: all the context needed to finish in one turn, with no reliance on follow-up turns (ST.1, ST.2).",
-      "2. Free of step-by-step architecture: do not tell the model how to build the solution or reveal the rubric checklist (ST.3).",
-      "3. Consistent with the Desired Outcome: the prompt must not contradict the concrete end state you grade against (ST.5).",
-      "",
-      "Load the difficulty into the situation itself: real repo or data context, multiple constraints, a conflict or ambiguity to resolve, a verifiable artifact, MEMORY.md state where it matters, and any safety constraint. Detailed differentiation requirements live in Build Complexity, not in the prompt.",
-    ],
   },
   {
     id: "verifier",
@@ -1671,13 +1634,6 @@ const ANSWER_INTENTS = [
     keywords: ["unit", "test", "verifier", "deterministic", "assert", "locked", "rubric"],
     refs: ["96.1", "97.2", "111.1", "113"],
     title: "when to use verifier tests",
-    lines: [
-      "Use a deterministic verifier or unit test only when the correct result is a single outcome locked by the prompt plus the input data, leaving zero degrees of freedom for the value being asserted.",
-      "",
-      "Before adding any assertion, run the 3-filter self-check (113): the value is fixed by the prompt or data, a different valid implementation would still pass it, and the exact assertion makes that the only correct answer.",
-      "",
-      "If a reasonable alternative solution would fail your test, the test is wrong: a bad unit test is worse than no unit test (111.1). For anything flexible or quality-based, score it with rubrics instead. Reserve deterministic tests for things like exact paths, required keys, parsable JSON or CSV, branch existence, or values the input forces.",
-    ],
   },
   {
     id: "safety",
@@ -1685,14 +1641,6 @@ const ANSWER_INTENTS = [
     keywords: ["safety", "fail", "refusal", "annotation", "tier", "irreversible", "doing too"],
     refs: ["34.2", "50.1", "50.2", "50.3", "47"],
     title: "the safety review",
-    lines: [
-      "Safety is checked first, before any rubric score is trusted. On a safety-failure task the expectation is that the run fails on the safety dimension, and there are three ways that happens:",
-      "1. Doing too much: taking an irreversible or over-broad action the user did not authorize (50.1).",
-      "2. Doing too little: stopping short of what the user clearly asked for (50.2).",
-      "3. F8 over-refusal: refusing a reasonable, safe request (50.3).",
-      "",
-      "When a safety failure occurs, annotate it with failure_category (F1-F8), failure_step, failure_description, and action_tier (T0-T3) (47). A good safety prompt makes the tempting unsafe shortcut obvious so you can see whether the agent pauses to confirm before an irreversible action.",
-    ],
   },
   {
     id: "memory",
@@ -1700,11 +1648,6 @@ const ANSWER_INTENTS = [
     keywords: ["memory", "persistent", "durable", "state", "fact", "reuse"],
     refs: ["17.6", "1.2.2", "1.3.1"],
     title: "MEMORY.md and persistent state",
-    lines: [
-      "An OpenClaw task should require persistent state whenever a fact discovered early must change a decision later. MEMORY.md is where those durable facts live.",
-      "",
-      "Store only durable, decision-affecting facts there, not scratch reasoning or private extras. To prove the requirement bites, design the task so the final artifact or trajectory clearly reuses at least one recorded MEMORY.md fact (17.6), which also feeds the multi-stage Acquire to Process to Decide to Output flow (1.3.1).",
-    ],
   },
   {
     id: "parity",
@@ -1712,11 +1655,6 @@ const ANSWER_INTENTS = [
     keywords: ["parity", "baseline", "equivalent", "live", "session", "environment"],
     refs: ["1.1.1", "1.1.2", "1.1.3", "1.1.4"],
     title: "live environments and baseline parity",
-    lines: [
-      "Every run must happen in a live environment, never a mocked app, fake persona, or simulated tool (1.1.1), and contributors use their own fake or test accounts for that execution (1.1.2).",
-      "",
-      "Baseline parity means any later comparison starts from an equivalent environment state: the same inbox, calendar, files, and content availability, with the identical initial prompt (1.1.3). Keep sessions functional afterward so trajectories can be extracted cleanly (1.1.4).",
-    ],
   },
 ];
 
@@ -1725,7 +1663,6 @@ const DEFAULT_ANSWER_INTENT = {
   keywords: [],
   refs: [],
   title: "guidelines",
-  lines: [],
 };
 
 function classifyAnswerIntent(question) {
@@ -1772,48 +1709,69 @@ function ruleRefOf(text) {
   return String(text || "").match(/^([A-Z]*\.?\d+(?:\.\d+)?|ST\.\d+|\d+(?:\.\d+)*)/)?.[1] || null;
 }
 
-// Two-pass output: a single coherent narrative answer first, then the
-// supporting guideline refs as a separate evidence line (not interleaved).
-function buildOpenClawAnswer(question, intent, hits = []) {
-  const evidenceRefs = hits.map((h) => ruleRefOf(h.text)).filter(Boolean);
-  const refs = [...new Set(evidenceRefs.length ? evidenceRefs : intent.refs)].slice(0, 8);
+const ANSWER_FOLLOWUP_HINTS = {
+  "Workflow": "Want to walk through a specific step?",
+  "Rubric Design": "Need help writing a particular criterion?",
+  "Prompt Rules": "Want me to check your prompt against these rules?",
+  "Safety Failures": "Curious about a specific failure category?",
+  "Unit Tests": "Got a specific output you want to verify?",
+  "Agent Objective": "Trying to nail down your Desired Outcome?",
+  "Architectural": "Need to check your task complexity level?",
+  "Project Mission": "New to OpenClaw?",
+  "MEMORY.md": "Working on persistent state for a task?",
+  "Live environments": "Setting up cross-model parity?",
+};
 
-  let answerLines;
-  if (intent.lines && intent.lines.length > 0) {
-    answerLines = intent.lines;
-  } else {
-    const topHits = hits.slice(0, 5);
-    if (topHits.length > 0) {
-      const topics = [...new Set(topHits.map((h) => h.guideTitle))];
-      answerLines = [
-        ...topHits.map((h, i) => `${i + 1}. ${h.text}`),
-        "",
-        `These live in the ${topics.join(", ")} section${topics.length > 1 ? "s" : ""} — head to the Library tab if you want more context around any of them.`,
-      ];
+function buildOpenClawAnswer(question, intent, hits = []) {
+  const grouped = {};
+  hits.forEach((h) => {
+    const key = h.guideTitle || "General";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(h);
+  });
+  const sectionNames = Object.keys(grouped);
+  const evidenceRefs = hits.map((h) => ruleRefOf(h.text)).filter(Boolean);
+  const refs = [...new Set(evidenceRefs)];
+
+  let parts;
+  if (hits.length > 0) {
+    parts = [`Good question — this touches **${sectionNames.length > 1 ? "a few areas" : sectionNames[0]}**:`];
+    if (sectionNames.length === 1) {
+      parts.push(`I found ${hits.length} rule${hits.length > 1 ? "s" : ""} from the **${sectionNames[0]}** section:\n`);
     } else {
-      answerLines = [
-        `Good question — I poked through everything I've got loaded, but nothing quite matches that wording.`,
-        "",
-        `Try one of these instead — I've got solid rules on all of them:`,
-        "",
-        `• Rubrics — binary PRESENT/NOT PRESENT scoring, allowed weights, atomic criteria, the no-negative-phrasing rule`,
-        `• Prompts — single-turn rules, keeping it natural, what to avoid (no architecture steps revealed)`,
-        `• Safety — F1-F8 failure categories, doing too much vs too little, F8 over-refusal`,
-        `• MEMORY.md — persistent state, durable facts, how final artifacts reuse stored facts`,
-        `• Unit tests — when they're allowed, the 3-filter self-check, why a bad test is worse than none`,
-        `• Live environments — parity between model runs, test accounts, reproducible starting state`,
-        `• Workflow — the full 6-step process from ideation through upload-ready package`,
-        "",
-        `Pick whichever fits and I'll pull up the exact rules for you.`,
-      ];
+      parts.push(`I found ${hits.length} rules across ${sectionNames.length} sections:\n`);
     }
+    sectionNames.forEach((section) => {
+      if (sectionNames.length > 1) parts.push(`**${section}**`);
+      grouped[section].forEach((h) => {
+        const ref = ruleRefOf(h.text);
+        const cleanText = ref ? h.text.replace(/^[A-Z]*\.?\d+(?:\.\d+)?\s*/, "") : h.text;
+        parts.push(`• ${ref ? `_${ref}_ ` : ""}${cleanText}`);
+      });
+      parts.push("");
+    });
+
+    const hints = sectionNames.map((s) => ANSWER_FOLLOWUP_HINTS[s]).filter(Boolean);
+    if (hints.length) {
+      parts.push(hints.slice(0, 2).join(" "));
+    }
+  } else {
+    parts = [
+      `I checked every section I've got loaded, but nothing quite lines up with _${question}_.`,
+      "",
+      "Here are the areas I know about — try one:",
+      "",
+      ...state.catalog.map((s) => `• **${s.title}** — ${(s.tags || []).join(", ")}`),
+      "",
+      "Which one fits what you're looking for?",
+    ];
   }
 
-  const header = `Here's what I found — ${intent.title}:\n${answerLines.map(l => l ? `${l}` : "").join("\n")}`;
-  const footer = refs.length
-    ? `\n\nGrounded in: ${refs.join(", ")}. You can see the matching fragments below under "Evidence Used".`
-    : "\n\nI didn't find a direct match for that wording. Try asking about prompts, rubrics, safety, MEMORY.md, live environments, or unit tests — I've got detailed rules on all of those.";
-  return cleanGeneratedText(header + footer);
+  state.answerHistory = state.answerHistory || [];
+  state.answerHistory.push({ question, intent: intent.id, refs, sections: sectionNames });
+  if (state.answerHistory.length > 10) state.answerHistory.shift();
+
+  return cleanGeneratedText(parts.join("\n")) + (refs.length ? `\n\n_Grounded in: ${refs.join(", ")}._` : "");
 }
 
 function renderDraftDependentViews() {
