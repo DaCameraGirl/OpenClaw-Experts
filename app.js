@@ -1557,7 +1557,7 @@ function renderRunner() {
 function renderAnswerHelper() {
   const rawQuestion = els["answer-question"].value.trim();
   if (!rawQuestion) {
-    els["answer-outline"].textContent = "Ask me anything about the OpenClaw guidelines — rubrics, prompts, safety, MEMORY.md, live environments, whatever you need. I'll pull up the relevant rules and show you the evidence.";
+    els["answer-outline"].textContent = "Hey! 👋 Ask me anything about the OpenClaw guidelines — rubrics, prompts, safety walks, MEMORY.md gotchas, live environment rules, whatever you're working on. I'll pull up the exact guideline rules and show you the evidence.";
     els["answer-rules"].innerHTML = "";
     return;
   }
@@ -1786,17 +1786,15 @@ function buildOpenClawAnswer(question, intent, hits = []) {
     if (topHits.length > 0) {
       const topics = [...new Set(topHits.map((h) => h.guideTitle))];
       answerLines = [
-        `Here's what I found in the OpenClaw guidelines about that:`,
-        "",
         ...topHits.map((h, i) => `${i + 1}. ${h.text}`),
         "",
-        `These rules live in the ${topics.join(", ")} section${topics.length > 1 ? "s" : ""} of the guidelines. You can browse the full text in the Library tab if you want more context around any of them.`,
+        `These live in the ${topics.join(", ")} section${topics.length > 1 ? "s" : ""} — head to the Library tab if you want more context around any of them.`,
       ];
     } else {
       answerLines = [
-        `Good question! I checked every OpenClaw guideline I have loaded, but nothing quite matches that wording.`,
+        `Good question — I poked through everything I've got loaded, but nothing quite matches that wording.`,
         "",
-        `Try asking about one of these topics instead — I've got detailed rules for all of them:`,
+        `Try one of these instead — I've got solid rules on all of them:`,
         "",
         `• Rubrics — binary PRESENT/NOT PRESENT scoring, allowed weights, atomic criteria, the no-negative-phrasing rule`,
         `• Prompts — single-turn rules, keeping it natural, what to avoid (no architecture steps revealed)`,
@@ -1806,20 +1804,16 @@ function buildOpenClawAnswer(question, intent, hits = []) {
         `• Live environments — parity between model runs, test accounts, reproducible starting state`,
         `• Workflow — the full 6-step process from ideation through upload-ready package`,
         "",
-        `Pick whichever one fits your question and I'll pull up the exact guideline rules.`,
+        `Pick whichever fits and I'll pull up the exact rules for you.`,
       ];
     }
   }
 
-  return cleanGeneratedText([
-    `Answer (${intent.title}):`,
-    ...answerLines,
-    "",
-    "--- Supporting guideline evidence ---",
-    refs.length
-      ? `Grounded in OpenClaw guidelines: ${refs.join(", ")}. The matching fragments are listed under "Evidence Used".`
-      : "No exact fragment matched this wording. Rephrase toward prompt, rubric, verifier, safety, MEMORY.md, or parity for matched evidence.",
-  ].join("\n"));
+  const header = `Here's what I found — ${intent.title}:\n${answerLines.map(l => l ? `${l}` : "").join("\n")}`;
+  const footer = refs.length
+    ? `\n\nGrounded in: ${refs.join(", ")}. You can see the matching fragments below under "Evidence Used".`
+    : "\n\nI didn't find a direct match for that wording. Try asking about prompts, rubrics, safety, MEMORY.md, live environments, or unit tests — I've got detailed rules on all of those.";
+  return cleanGeneratedText(header + footer);
 }
 
 function renderDraftDependentViews() {
