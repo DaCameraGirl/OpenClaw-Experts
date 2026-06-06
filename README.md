@@ -32,6 +32,22 @@ http://localhost:8000
 
 No build step, package install, or backend is required.
 
+## Desktop Launcher (crab claw 🦀)
+
+For a one-click launch with a crab-claw icon on your desktop:
+
+1. Run the shortcut installer once — right-click `Create-Desktop-Shortcut.ps1` and choose **Run with PowerShell**.
+2. A **OpenClaw Experts** shortcut with the crab-claw icon appears on your Desktop.
+3. Double-click it. The launcher (`OpenClaw-Experts-Launcher.ps1`) starts a local server on port 8010 and opens the app in your browser automatically.
+
+| File | Role |
+| --- | --- |
+| `openclaw-claw.ico` | Crab-claw desktop icon (16–256px) |
+| `Create-Desktop-Shortcut.ps1` | Creates the Desktop shortcut (run once) |
+| `OpenClaw-Experts-Launcher.ps1` | Starts the local server and opens the app |
+
+No manual `python -m http.server` step is needed when using the shortcut.
+
 ## Key Files
 
 | Path | Role |
