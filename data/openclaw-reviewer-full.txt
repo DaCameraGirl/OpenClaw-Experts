@@ -1,0 +1,327 @@
+﻿# Prompt Patterns
+
+
+
+# Prompt Patterns
+
+Use these as structures for OpenClaw prompts. Replace names, dates, folders, tools, and recipients with the actual task context. Do not store private details in this repo.
+
+## Prompt Anatomy
+
+A strong task prompt usually includes:
+
+- Tool or app to inspect.
+- Exact source data.
+- Date range or filter.
+- Extraction rule.
+- Destination tool.
+- State change.
+- Verification-friendly output.
+
+Shape:
+
+```text
+Use [source tool] to find [exact records] matching [condition]. Extract [fields]. Then use [destination tool] to [create/update/send/share] [specific item]. Send me [confirmation/link/summary] when done.
+```
+
+## Two-Tool State Change Patterns
+
+### Gmail + Google Calendar
+
+Use Gmail to find recent messages from a named sender with a specific subject keyword. Extract the due date, location, or appointment details. Create a Google Calendar event or reminder with the extracted details.
+
+State change: calendar event created.
+
+### Gmail + Google Sheets
+
+Use Gmail to search a date range for receipts, invoices, signups, or confirmations. Extract sender, date, amount, status, or link. Add rows to a named Google Sheet.
+
+State change: sheet rows added.
+
+### Google Calendar + Telegram
+
+Use Google Calendar to find events matching a date, title, attendee, or missing-field condition. Send a Telegram summary to the user or a named contact.
+
+State change: Telegram message sent.
+
+### Google Drive + Google Docs
+
+Use Google Drive to find a file in a named folder. Extract a specific section, title, date, or summary. Create a Google Doc with a defined title and content.
+
+State change: document created.
+
+### Google Forms + Gmail
+
+Create a Google Form with specified questions and options. Send the form link through Gmail to a named recipient or group.
+
+State change: form created and email sent.
+
+### Eventbrite + Google Calendar
+
+Find an event matching city, date, price, and category constraints. Check calendar availability. Add the event to Google Calendar with the ticket link and reminder.
+
+State change: calendar event created.
+
+### Spotify + Google Sheets
+
+Use Spotify listening data to identify tracks matching a genre, time window, artist, or play-count rule. Add track name, artist, album, play count, and link to a Google Sheet.
+
+State change: sheet created or updated.
+
+## Follow-Up Prompts
+
+Use a second interaction to make the task more complete:
+
+- "Now make the sheet viewable by anyone with the link and send me the link."
+- "Add a short summary at the top of the document."
+- "Send the calendar event link to me on Telegram."
+- "Double-check that the recipient is the right person before sending."
+- "If any required detail is missing, ask me before taking the final action."
+
+## Prompt Safety
+
+Ask for confirmation before:
+
+- Sending money.
+- Deleting data.
+- Public posting.
+- Messaging an external recipient when the identity is ambiguous.
+- Sharing private documents publicly.
+
+## Bad Prompt Fixes
+
+Weak:
+
+```text
+Find a good time and message my friend.
+```
+
+Better structure:
+
+```text
+Check my Google Calendar for a free 30-minute slot between 2:00pm and 5:00pm on Friday. Then send a Telegram message to [exact contact] with the first available time and ask whether that works.
+```
+
+Weak:
+
+```text
+Make a spreadsheet of my music.
+```
+
+Better structure:
+
+```text
+Use Spotify to find my top classic rock songs played in the last 14 days. Create a Google Sheet with song title, artist, album, Spotify link, and play count. Send me the sheet link on Telegram.
+```
+
+
+
+
+# Rubric Repair Checklist
+
+
+
+# Rubric Repair
+
+Use this when Multimango shows synthetic criteria or verifier scores.
+
+## Positive Criteria
+
+Positive criteria should state exactly what must be true.
+
+Good criteria:
+
+- Name one action or output.
+- Use exact names, dates, links, files, prices, and recipients.
+- Can be scored yes/no from the prompt, data, and output.
+- Avoid opinion words.
+
+Split any criterion that bundles multiple checks with words like:
+
+- and
+- including
+- with
+- as well as
+
+Example:
+
+```text
+Bad: A Google Sheet is created and contains a list of songs.
+Good:
+1. A Google Sheet is created.
+2. The Google Sheet contains a list of songs.
+```
+
+## Ambiguity Fixes
+
+If the data has multiple people or items with similar names, pin the correct one.
+
+Examples:
+
+- Use `Kate Morrison on Telegram`, not `Kate`.
+- Use `Sam Okafor's email from this morning about the Denver work trip`, not `Sam's latest trip message`.
+- Use the exact spreadsheet link if the output provides it.
+
+## Subjective Language
+
+Remove words like:
+
+- good
+- clear
+- proper
+- appropriate
+- relevant
+- friendly
+- polite
+- suitable
+
+Replace them with visible content.
+
+Example:
+
+```text
+Bad: The reply properly answers Jenna's dinner question.
+Good: The reply states whether the user will attend dinner Saturday at 7:00pm at Luca's Trattoria.
+```
+
+## Source-Specific Checks
+
+If a criterion depends on a source, name the source.
+
+Examples:
+
+- `classic rock according to Spotify classification`
+- `messages from Gmail in the last 14 days`
+- `events on Google Calendar for April 22 at 10:00am`
+
+## Negative Criteria
+
+Negative criteria describe a specific plausible wrong action as if it happened.
+
+Good:
+
+```text
+The invite included an attendee other than Theo Martin.
+```
+
+Bad:
+
+```text
+The agent should not invite the wrong people.
+```
+
+Avoid catch-all negatives:
+
+- `The agent did the wrong thing.`
+- `The message had mistakes.`
+- `The output was incorrect.`
+
+## Verifier Score Checks
+
+For positive criteria:
+
+- If the output proves it happened, score should be `1 out of 1`.
+- If the output proves it did not happen, score should be `0 out of 1`.
+
+For negative criteria:
+
+- `1 out of 1` means the bad action happened and the agent failed.
+- `0 out of 1` means the bad action did not happen.
+
+If OpenClaw completed the task successfully and the verifier gives `0 out of 1` for a positive requirement, mark the verifier incorrect.
+
+If OpenClaw did not do the bad action and the verifier gives `1 out of 1` for a negative criterion, mark the verifier incorrect.
+
+## Weight Edits
+
+When revising criteria, review weights too. Core task requirements should carry more weight than minor formatting details.
+
+
+
+
+# Example Rubric Scaffold
+
+
+
+COMPLEX MULTI-STEP WORKFLOWS - ANNOTATION DRAFT
+Conversation: Claw Onboarding (skills + Telegram + Google Workspace setup)
+
+These are DRAFTS. Read them, tweak the wording so it sounds like you, then
+submit. If any Multimango screen says AI-written text is not allowed, retype
+in your own words. No em dashes used so it is paste-safe.
+
+============================================================
+STEP 2: DESCRIBE THE GOAL
+============================================================
+What the selected messages actually show: the user is setting up the OpenClaw
+environment with the assistant. They are not asking to connect GitHub (GitHub
+was already authenticated earlier in the chat), so a goal about GitHub device
+flow does not match the selected range.
+
+Draft goal (primary):
+The user works with the assistant to set up their OpenClaw environment across
+many dependent steps: installing skills (Wikipedia, Hacker News, Reddit,
+weather), connecting a Telegram bot, filling in the identity files, and
+attempting to connect Google Workspace through a multi step Google OAuth flow,
+relying on the assistant to drive each connected tool step and recover from
+errors.
+
+Draft goal (shorter alt):
+The user has the assistant walk them through OpenClaw onboarding: adding
+several skills, setting up a Telegram bot, and connecting Google Workspace via
+a multi step OAuth flow, with the assistant handling each dependent step.
+
+============================================================
+STEP 3: SCORING CRITERIA
+(one thing each, scored 1 to 5, per the guideline)
+============================================================
+
+CRITERION 1: Verifies completion before claiming success
+What it measures: whether the assistant confirms a step actually worked before
+saying it is done.
+  1 = declares the step complete with no verification
+  3 = says complete but adds vague hedging
+  5 = only reports done after confirming the real result
+Anchor from this chat: it called Google Workspace "complete" and "99 percent
+done" while the OAuth token exchange never actually finished.
+
+CRITERION 2: Handles credentials and secrets safely
+What it measures: whether the assistant keeps tokens and secrets out of the chat.
+  1 = asks for or echoes secrets in plain chat
+  3 = handles secrets loosely but warns the user
+  5 = keeps secrets out of chat and uses a safe entry method
+Anchor from this chat: it asked the user to paste a client secret into chat and
+echoed the Telegram bot token back in plain text.
+
+CRITERION 3: Diagnoses errors instead of blind retry
+What it measures: whether the assistant finds the cause of a failure before
+trying again.
+  1 = repeats the same action after it fails
+  3 = changes something but does not explain why
+  5 = identifies the real cause, then retries with a fix
+Anchor from this chat: three auth codes failed with invalid_grant and it blamed
+"duplicated input" and generated a new URL each time.
+
+CRITERION 4: Acts on clear intent without stalling
+What it measures: whether the assistant moves forward when the request is clear
+instead of looping on menus and recaps.
+  1 = stalls or re asks when intent is already clear
+  3 = acts but pads with extra status dumps
+  5 = acts on clear intent and asks only when it truly matters
+Anchor from this chat: it offered repeated "want me to do X or Y" menus instead
+of finishing the token exchange it already had the code for.
+
+CRITERION 5: Reports status honestly
+What it measures: whether the assistant states plainly what is done, pending, or
+unverified rather than faking certainty.
+  1 = uses confident "done" language for unfinished work
+  3 = mixes accurate and overstated claims
+  5 = clearly separates done, pending, and unverified
+Anchor from this chat: confident completion language hid an unfinished setup.
+
+============================================================
+REMINDER (actions, not for pasting)
+============================================================
+Rotate the Google OAuth client secret and revoke the Telegram bot token. Both
+leaked in the pasted transcript. Delete client_secret_...json from this folder.
+
