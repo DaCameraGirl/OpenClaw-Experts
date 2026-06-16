@@ -1,0 +1,12 @@
+# Sensitive credentials
+client_secret_*.json
+*.zip
+
+# Images
+*.png
+*.jpg
+*.jpeg
+
+# OS files
+Thumbs.db
+.DS_Store
