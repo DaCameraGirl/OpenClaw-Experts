@@ -10,3 +10,6 @@ client_secret_*.json
 # OS files
 Thumbs.db
 .DS_Store
+
+# Raw conversation transcripts (may contain live tokens)
+Obsidian_Guidelines/Annotate_Conversation_*.txt
