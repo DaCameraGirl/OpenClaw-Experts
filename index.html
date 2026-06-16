@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <title>OpenClaw Experts</title>
+    <title>Project Obsidian Rubric Builder</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -13,8 +13,8 @@
         <div class="brand">
           <div class="brand-mark" aria-hidden="true">OC</div>
           <div>
-            <h1>OpenClaw Experts</h1>
-            <p>Staged task pipeline</p>
+            <h1>Project Obsidian</h1>
+            <p>Rubric builder</p>
           </div>
         </div>
 
@@ -39,8 +39,8 @@
           </div>
         </div>
 
-        <p class="stats-note">Every prompt, rubric, gate, verifier, and answer is OpenClaw-only.</p>
-        <p class="source-note">Bundled source: <code>openclaw-rules.json</code></p>
+        <p class="stats-note">Paste a selected conversation, draft the goal, and produce Multimango-ready rubric text.</p>
+        <p class="source-note">Bundled source: Project Obsidian prompt patterns and rubric checks</p>
 
         <details class="api-section">
           <summary>DeepSeek API (optional)</summary>
@@ -71,24 +71,24 @@
       <main class="workspace">
         <header class="workspace-intro">
           <div>
-            <p class="eyebrow">OpenClaw RL Guidelines engine</p>
-            <h2>One staged pipeline: design, build, review, verify, ship.</h2>
+            <p class="eyebrow">Project Obsidian rubric engine</p>
+            <h2>Conversation in, Step 2 Goal and scoring criteria out.</h2>
           </div>
-          <p>Each stage feeds the next. Generate the task, build and gate the package, review rubrics, derive the verifier, and mark it upload-ready - all OpenClaw, all in the browser.</p>
+          <p>Use the selected OpenClaw message range as source material, then build a clean rubric scaffold in the exact field order Multimango expects.</p>
         </header>
 
         <section class="topbar" aria-label="Search">
           <div class="search-box">
-            <label for="search">Find OpenClaw rules</label>
-            <input id="search" type="search" placeholder="Search parity, MEMORY.md, silver trajectory, rubric weights..." autocomplete="off" />
+            <label for="search">Find rubric guidance</label>
+            <input id="search" type="search" placeholder="Search credential safety, prompt patterns, scoring, categories..." autocomplete="off" />
           </div>
-          <button id="sample-data" type="button">Reload OpenClaw Rules</button>
+          <button id="sample-data" type="button">Reload Guides</button>
         </section>
 
         <!-- ====================== PIPELINE VIEW ====================== -->
         <section class="view is-visible" id="view-pipeline">
           <div class="view-desc">
-            <strong>Pipeline</strong> - Five OpenClaw stages run in order. Each stage unlocks the next only once its output exists, so the package you ship is the package every stage actually checked.
+            <strong>Pipeline</strong> - Paste the selected conversation, write the Step 2 Goal, build Project Obsidian criteria, then copy the exact rubric text.
           </div>
 
           <!-- Numbered stage rail: each step gates the next -->
@@ -98,8 +98,8 @@
           <section class="stage-panel is-active-stage" id="stage-design" data-stage="design">
             <div class="panel wide-panel generator-panel">
               <div>
-                <p class="eyebrow">Stage 1 - Design &amp; Generate</p>
-                <h2>Pick a hard OpenClaw scenario and generate the full task + rubric draft.</h2>
+                <p class="eyebrow">Stage 1 - Conversation &amp; Goal</p>
+                <h2>Paste the selected conversation and draft the Step 2 Goal.</h2>
               </div>
               <div class="generator-actions">
                 <label>
@@ -107,12 +107,16 @@
                   <textarea id="seed-request" rows="3" placeholder="Paste the real user request, repo problem, or reviewer idea. The generator builds from this instead of canned prompts."></textarea>
                 </label>
                 <label>
-                  Task family
+                  Conversation to annotate
+                  <textarea id="conversation-source" rows="8" placeholder="Paste the full selected OpenClaw conversation range here. Use this as the source for the Step 2 Goal and every criterion."></textarea>
+                </label>
+                <label>
+                  Reference family (optional)
                   <select id="starter"></select>
                 </label>
-                <button id="fill-starter" class="primary large-action" type="button">1. Generate full task + rubric</button>
-                <button id="regenerate-prompt" type="button">Regenerate prompt</button>
-                <button id="improve-draft" type="button">Auto-fill missing pieces</button>
+                <button id="fill-starter" class="primary large-action" type="button">1. Start blank rubric set</button>
+                <button id="regenerate-prompt" type="button">Refresh draft</button>
+                <button id="improve-draft" type="button">Add missing blank slots</button>
               </div>
             </div>
 
@@ -120,7 +124,7 @@
 
             <div class="panel wide-panel">
               <div class="panel-header">
-                <h2>OpenClaw Task Draft</h2>
+                <h2>Project Obsidian Rubric Draft</h2>
                 <div class="inline-actions">
                   <span id="app-version" class="version-chip"></span>
                   <button id="clear-draft" type="button">Clear draft</button>
@@ -143,12 +147,12 @@
               </div>
 
               <label>
-                Generated prompt
+                Exact prompt or selected starting request
                 <textarea id="single-turn-prompt" rows="7" placeholder="Click Generate. This becomes the exact single-turn prompt the agent receives."></textarea>
               </label>
               <label>
-                Agent Objective
-                <textarea id="agent-objective" placeholder="Persona, real-world problem, context, and high-level success."></textarea>
+                Step 2 Goal
+                <textarea id="agent-objective" placeholder="The user asks the assistant to..."></textarea>
               </label>
               <label>
                 Core Functionalities
@@ -221,26 +225,26 @@
 
             <div class="stage-foot">
               <p class="stage-foot-note" id="design-foot-note">Generate a draft to unlock Stage 2.</p>
-              <button id="goto-build" class="primary stage-next" type="button" disabled>Continue to Build Package -&gt;</button>
+              <button id="goto-build" class="primary stage-next" type="button" disabled>Continue to Build Rubric -&gt;</button>
             </div>
           </section>
 
-          <!-- STAGE 2 - BUILD PACKAGE -->
+          <!-- STAGE 2 - BUILD RUBRIC -->
           <section class="stage-panel" id="stage-build" data-stage="build">
             <div class="panel wide-panel">
               <div class="panel-header">
-                <h2>Stage 2 - Build Package</h2>
+                <h2>Stage 2 - Build Rubric</h2>
                 <div class="inline-actions">
-                  <button id="build-package" class="primary" type="button">2. Build Package</button>
-                  <button id="copy-package" type="button">Copy Package</button>
+                  <button id="build-package" class="primary" type="button">2. Build Rubric Text</button>
+                  <button id="copy-package" type="button">Copy Rubric</button>
                   <button id="download-package" type="button">Download</button>
                 </div>
               </div>
-              <p class="helper-copy">Assembles the paste-ready OpenClaw fields from your Stage 1 draft and runs every quality gate. A blocked gate set keeps Stage 3 review open but holds the upload gate locked.</p>
-              <div id="package-output" class="package-block">Build a package to see paste-ready OpenClaw fields here.</div>
+              <p class="helper-copy">Assembles the paste-ready Project Obsidian format: Step 2 Goal followed by numbered criteria with description, category, importance, optional failure fields, and 0/1/2 scoring.</p>
+              <div id="package-output" class="package-block">Build a rubric to see paste-ready Project Obsidian text here.</div>
             </div>
             <div class="stage-foot">
-              <p class="stage-foot-note" id="build-foot-note">Build the package to unlock Stage 3.</p>
+              <p class="stage-foot-note" id="build-foot-note">Build the rubric to unlock Stage 3.</p>
               <button id="goto-review" class="primary stage-next" type="button" disabled>Continue to Review -&gt;</button>
             </div>
           </section>
@@ -256,9 +260,9 @@
               <details class="review-panel">
                 <summary>Rubric Criteria</summary>
                 <div class="inline-actions rubric-actions">
-                  <button id="add-rubric-set" class="primary" type="button">Generate recommended set</button>
+                  <button id="add-rubric-set" class="primary" type="button">Start blank set</button>
                   <button id="add-rubric" type="button">Add Criterion</button>
-                  <button id="copy-rubrics" type="button">Copy JSON</button>
+                  <button id="copy-rubrics" type="button">Copy Criteria Text</button>
                 </div>
                 <div id="rubric-list"></div>
               </details>
@@ -284,7 +288,7 @@
                   <select id="template-kind">
                     <option value="verifier">Verifier stub</option>
                     <option value="memory">MEMORY.md</option>
-                    <option value="rubric">Rubric JSON</option>
+                    <option value="rubric">Project Obsidian rubric</option>
                     <option value="upload">Upload folders</option>
                     <option value="sourcing">Sourcing / Inspiration</option>
                     <option value="safety">Safety annotation</option>
@@ -294,7 +298,7 @@
                 </div>
               </div>
               <p class="helper-copy">These files are derived from the package built in Stage 2 - the verifier keys come from your Desired Outcome and the rubric JSON mirrors Stage 3. Fill every TODO and keep deterministic tests to locked outputs only.</p>
-              <pre id="template-output" class="package-block tall">Build a package in Stage 2, then sync.</pre>
+              <pre id="template-output" class="package-block tall">Build a rubric in Stage 2, then sync.</pre>
             </div>
             <div class="stage-foot">
               <p class="stage-foot-note" id="verifier-foot-note">Sync the verifier, then continue to upload readiness.</p>
@@ -308,7 +312,7 @@
               <form id="runner-form" class="panel">
                 <div class="panel-header"><h2>Stage 5 - Upload Readiness</h2></div>
                 <label>
-                  Package
+                  Rubric text
                   <select id="package-status">
                     <option value="not-built">not-built</option>
                     <option value="needs-fixes">needs-fixes</option>
@@ -348,7 +352,7 @@
         <!-- ====================== LIBRARY VIEW ====================== -->
         <section class="view" id="view-library">
           <div class="view-desc">
-            <strong>Library</strong> - OpenClaw guideline sections and custom reviewer notes. The complete text is searchable from the bar above and feeds the Answer Helper.
+            <strong>Library</strong> - Project Obsidian prompt patterns, rubric guidance, and custom reviewer notes. Searchable content feeds the Answer Helper.
           </div>
           <div class="split">
             <form id="guide-form" class="panel" autocomplete="off">
@@ -385,13 +389,13 @@
         <!-- ====================== ANSWER HELPER VIEW ====================== -->
         <section class="view" id="view-answer">
           <div class="view-desc">
-            <strong>Answer Helper</strong> - Ask anything about the OpenClaw guidelines. I search the loaded RL and Reviewer guidelines and show the evidence.
+            <strong>Answer Helper</strong> - Ask about prompt patterns, rubric fields, safety criteria, or scoring. I search the loaded guides and show the evidence.
           </div>
           <div class="split stacked-mobile">
             <div class="panel">
               <div id="answer-chat" class="chat-log">
                 <div class="chat-msg bot">
-                  **Hi.** Ask me about rubrics, prompts, safety, sourcing, verifiers, MEMORY.md, environments — whatever you're working on. I'll pull the relevant guideline rules and show you the source.
+                  **Hi.** Ask me about Project Obsidian rubrics, prompt patterns, credential safety, categories, importance, or scoring. I'll pull the relevant guide text and show the source.
                 </div>
               </div>
               <div class="chat-input-row">
@@ -409,6 +413,6 @@
     </div>
 
     <script src="env-config.js"></script>
-    <script src="app.js?v=openclaw-rl-v13"></script>
+    <script src="app.js?v=project-obsidian-rubric-v1"></script>
   </body>
 </html>

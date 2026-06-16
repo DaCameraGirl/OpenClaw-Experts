@@ -1,6 +1,6 @@
-# OpenClaw Experts
+# Project Obsidian Rubric Builder
 
-Static browser-only OpenClaw task engine: it generates a task prompt, weighted rubric, quality-gate audit, helper templates, workflow tracker, and run checklist from OpenClaw-only rules.
+Static browser-only Project Obsidian rubric workspace: paste a selected OpenClaw conversation, draft the Step 2 Goal, build criteria in the Multimango field order, and copy/download paste-ready rubric text.
 
 This is the OpenClaw counterpart to `selection-improvement-experts`, but it does not import Selection Improvement or TBench fields. Every generated section maps to the OpenClaw RL Guidelines.
 
@@ -9,9 +9,9 @@ This is the OpenClaw counterpart to `selection-improvement-experts`, but it does
 | Workspace | Purpose |
 | --- | --- |
 | Library | Search and edit bundled OpenClaw rules plus local reviewer notes |
-| Task Builder | Generate the full prompt, objective, desired outcome, MEMORY.md plan, upload plan, and rubric |
-| Rubric Lab | Edit generated weighted rubrics and validate atomic positive criteria |
-| Quality Gates | Audit live environment, parity, Skills, MEMORY.md, prompt, rubrics, unit tests, safety, and upload readiness |
+| Task Builder | Paste the selected conversation and write the Step 2 Goal |
+| Rubric Lab | Edit Project Obsidian criteria with category, importance, optional failure fields, and 0/1/2 scoring |
+| Quality Gates | Check required rubric fields, atomicity, safety coverage, and paste hygiene |
 | Workflow | Track the six-step OpenClaw path from idea through rubric to an upload-ready package |
 | Templates | Generate MEMORY.md, rubric JSON, verifier stub, safety annotation, and upload package templates |
 | Runner | Track package status, prompt status, and upload readiness |

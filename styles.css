@@ -613,7 +613,7 @@ label textarea {
 
 .rubric-controls {
   display: grid;
-  grid-template-columns: 130px minmax(160px, 1fr);
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr);
   gap: 8px;
   margin-top: 8px;
 }
