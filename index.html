@@ -19,7 +19,8 @@
         </div>
 
         <nav class="tabs" aria-label="Primary">
-          <button class="tab is-active" data-view="pipeline" type="button">Pipeline</button>
+          <button class="tab is-active" data-view="annotate" type="button">Annotate</button>
+          <button class="tab" data-view="pipeline" type="button">Pipeline</button>
           <button class="tab" data-view="library" type="button">Library</button>
           <button class="tab" data-view="answer" type="button">Answer Helper</button>
         </nav>
@@ -85,8 +86,30 @@
           <button id="sample-data" type="button">Reload Guides</button>
         </section>
 
+        <!-- ====================== ANNOTATE VIEW ====================== -->
+        <section class="view is-visible" id="view-annotate">
+          <div class="view-desc">
+            <strong>Annotate</strong> - Paste the completed OpenClaw conversation. Click Generate. It reads the conversation, applies your uploaded guidelines, and gives you the Goal and the criterion rubric.
+          </div>
+          <div class="annotate-grid">
+            <div class="annotate-input-col">
+              <label class="field-label" for="annotate-input">Completed conversation</label>
+              <textarea id="annotate-input" rows="20" placeholder="Paste the full selected OpenClaw conversation range here..."></textarea>
+              <div class="annotate-actions">
+                <button id="annotate-generate" class="primary large-action" type="button">Generate Goal &amp; Rubric</button>
+                <button id="annotate-copy" type="button">Copy result</button>
+              </div>
+              <p id="annotate-status" class="stage-foot-note">Add your API key in the top bar, paste a conversation, then Generate.</p>
+            </div>
+            <div class="annotate-output-col">
+              <label class="field-label">Result</label>
+              <div id="annotate-output" class="annotate-output"><p class="empty-note">Your Goal and criterion rubric will appear here.</p></div>
+            </div>
+          </div>
+        </section>
+
         <!-- ====================== PIPELINE VIEW ====================== -->
-        <section class="view is-visible" id="view-pipeline">
+        <section class="view" id="view-pipeline">
           <div class="view-desc">
             <strong>Pipeline</strong> - Paste the selected conversation, write the Step 2 Goal, build Project Obsidian criteria, then copy the exact rubric text.
           </div>

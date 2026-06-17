@@ -577,6 +577,7 @@ function cacheElements() {
   [
     "stat-guides", "stat-rules", "stat-pass",     "search", "export-data", "import-data", "clear-data",
     "answer-input", "answer-send", "answer-chat",
+    "annotate-input", "annotate-generate", "annotate-copy", "annotate-output", "annotate-status",
     "api-key", "api-model",
     "sample-data", "guide-form", "guide-id", "guide-title", "guide-tags", "guide-body",
     "reset-form", "guide-list", "match-count", "app-version",
@@ -629,6 +630,8 @@ function bindEvents() {
   els["mark-upload-ready"].addEventListener("click", markUploadReady);
   els["answer-input"].addEventListener("keydown", (e) => { if (e.key === "Enter") askAnswerHelper(); });
   els["answer-send"].addEventListener("click", askAnswerHelper);
+  if (els["annotate-generate"]) els["annotate-generate"].addEventListener("click", generateGoalAndRubric);
+  if (els["annotate-copy"]) els["annotate-copy"].addEventListener("click", () => copyText(state.lastAnnotation || ""));
   els["api-key"].addEventListener("change", () => { localStorage.setItem("openclaw-api-key", els["api-key"].value.trim()); });
   els["api-model"].addEventListener("change", () => { localStorage.setItem("openclaw-api-model", els["api-model"].value); });
 
@@ -1992,6 +1995,95 @@ function askAnswerHelper() {
     askWithDeepSeek(raw, apiKey);
   } else {
     answerLocally(raw);
+  }
+}
+
+// --- Annotate: conversation in, Goal + criterion rubric out ----------------
+
+// Flatten the loaded guideline catalog into a compact grounding block so the
+// model writes the Goal and rubric in the project's own language/categories.
+function buildGuidelineContext() {
+  const sections = state.catalog || [];
+  return sections
+    .map((s) => {
+      const rules = (s.rules || []).map((r) => `- ${r.text}`).join("\n");
+      return `## ${s.title}\n${rules}`;
+    })
+    .join("\n\n");
+}
+
+// Light Markdown render: safe (escaped first), just enough for headings/bold/lists.
+function renderAnnotationMarkdown(md) {
+  return escapeHtml(md)
+    .replace(/^#{3,} (.*)$/gm, "<h4>$1</h4>")
+    .replace(/^## (.*)$/gm, "<h3>$1</h3>")
+    .replace(/^# (.*)$/gm, "<h3>$1</h3>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
+}
+
+async function generateGoalAndRubric() {
+  const convo = els["annotate-input"]?.value?.trim();
+  const out = els["annotate-output"];
+  const status = els["annotate-status"];
+  if (!convo) {
+    status.textContent = "Paste the completed conversation first.";
+    return;
+  }
+  const apiKey = els["api-key"]?.value?.trim();
+  if (!apiKey) {
+    status.textContent = "Add your API key in the top bar first (the sk-... box), then Generate.";
+    return;
+  }
+  const model = els["api-model"]?.value || "deepseek-chat";
+  const guidance = buildGuidelineContext();
+
+  status.textContent = "Reading the conversation and applying your guidelines...";
+  out.innerHTML = '<p class="empty-note">Working...</p>';
+  els["annotate-generate"].disabled = true;
+
+  const system = `You are a Project Obsidian annotation assistant. You are given the official Project Obsidian / OpenClaw guidelines and ONE completed OpenClaw conversation. Produce exactly two things, grounded strictly in the guidelines and in what actually happens in the conversation:
+
+1. A "## Goal" section: a single clear Step 2 Goal statement in the project's required style, beginning "The user asks the assistant to...". Describe what the user actually wanted OpenClaw to accomplish in this conversation.
+
+2. A "## Criterion Rubric" section: a numbered list of 6 to 8 scoring criteria a reviewer would use to judge OpenClaw's performance on THIS conversation. For each criterion give, on one line: a short bold title, then a concrete pass condition phrased so a 0/1 judgment is unambiguous, and where relevant the guideline category (e.g. Credential & Security, Safety & Trustworthiness, required tool use, observable state change, follow-up). Prefer the guidelines' own categories and severities.
+
+Base every criterion on the actual conversation. Do not invent tools or actions that never appear. Output clean Markdown only.
+
+=== OFFICIAL GUIDELINES ===
+${guidance || "(No guidelines loaded — use general Project Obsidian best practice.)"}`;
+
+  try {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: `Completed OpenClaw conversation below. Generate the Goal and the Criterion Rubric.\n\n=== CONVERSATION ===\n${convo}` },
+        ],
+        temperature: 0.2,
+        max_tokens: 2048,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "unknown error");
+      throw new Error(`API ${res.status}: ${errText.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const md = data.choices?.[0]?.message?.content?.trim() || "No response from API.";
+    state.lastAnnotation = md;
+    out.innerHTML = renderAnnotationMarkdown(md);
+    status.textContent = "Done. Review it, then Copy result.";
+  } catch (err) {
+    out.innerHTML = '<p class="empty-note">No result.</p>';
+    status.textContent = `API error: ${err.message}`;
+  } finally {
+    els["annotate-generate"].disabled = false;
   }
 }
 

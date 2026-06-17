@@ -829,3 +829,41 @@ label textarea {
   min-width: 60px;
 }
 
+
+/* --- Annotate view: conversation in, Goal + rubric out --- */
+.annotate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .annotate-grid { grid-template-columns: 1fr; }
+}
+.annotate-input-col textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 320px;
+  font-family: inherit;
+}
+.annotate-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.annotate-output {
+  border: 1px solid var(--border, #2a2a3a);
+  border-radius: 10px;
+  padding: 16px 18px;
+  min-height: 320px;
+  background: var(--panel, rgba(255,255,255,0.02));
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.annotate-output h3 {
+  margin: 14px 0 8px;
+  font-size: 16px;
+}
+.annotate-output h3:first-child { margin-top: 0; }
+.annotate-output h4 { margin: 12px 0 6px; font-size: 14px; }
